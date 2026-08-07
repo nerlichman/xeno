@@ -1,0 +1,115 @@
+<div class="xeno-dev">
+  <p><%= link_to "← sessions", dev_ui_path %></p>
+  <h1>
+    session #<%= @session.id %>
+    <span class="badge badge-<%= @session.status %>"><%= @session.status %></span>
+  </h1>
+
+  <div class="columns">
+    <section class="chat">
+      <h2>Conversation</h2>
+      <% @messages.each do |message| %>
+        <% next if message.role == "system" %>
+        <div class="msg msg-<%= message.role %>">
+          <div class="role"><%= message.role %></div>
+          <% if message.tool_call? %>
+            <% message.ruby_llm_tool_calls.each do |call| %>
+              <code>→ <%= call.name %>(<%= call.arguments.to_json %>)</code>
+            <% end %>
+          <% end %>
+          <% if message.content.present? %>
+            <div class="content"><%= simple_format(message.content) %></div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if @pending_actions.any? %>
+        <div class="pending">
+          <h3>⏸ waiting on you</h3>
+          <% @pending_actions.each do |action| %>
+            <div class="action">
+              <% if action.kind == "question" %>
+                <p><strong><%= action.input&.dig("question") %></strong></p>
+                <%= form_with url: dev_session_input_path(@session), method: :post, local: true do |f| %>
+                  <%= f.hidden_field :action_id, value: action.id %>
+                  <%= f.text_field :answer, placeholder: "Your answer…", required: true %>
+                  <%= f.submit "Answer" %>
+                <% end %>
+              <% else %>
+                <p><code><%= action.tool_name %>(<%= action.input.to_json %>)</code></p>
+                <%= form_with url: dev_session_input_path(@session), method: :post, local: true, class: "inline" do |f| %>
+                  <%= f.hidden_field :action_id, value: action.id %>
+                  <%= f.hidden_field :decision, value: "approve" %>
+                  <%= f.submit "Approve" %>
+                <% end %>
+                <%= form_with url: dev_session_input_path(@session), method: :post, local: true, class: "inline" do |f| %>
+                  <%= f.hidden_field :action_id, value: action.id %>
+                  <%= f.hidden_field :decision, value: "deny" %>
+                  <%= f.submit "Deny", class: "deny" %>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if @session.active? %>
+        <%= form_with url: dev_session_message_path(@session), method: :post, local: true, class: "reply" do |f| %>
+          <%= f.text_field :message, placeholder: "Reply…", required: true %>
+          <%= f.submit "Send" %>
+          <label title="Stop the active turn and make this message the next one">
+            <%= f.check_box :steer %> steer
+          </label>
+        <% end %>
+        <%= form_with url: dev_session_compact_path(@session), method: :post, local: true, class: "inline" do |f| %>
+          <%= f.submit "Compact transcript", title: "Summarize-and-replace everything but the recent turns" %>
+        <% end %>
+      <% else %>
+        <p class="muted">Session is <%= @session.status %>.</p>
+      <% end %>
+    </section>
+
+    <section class="events">
+      <h2>Event stream <span class="live" id="live-dot">●</span></h2>
+      <ol id="event-list" start="0">
+        <% @events.each do |event| %>
+          <li value="<%= event.index %>"><code><%= event.event_type %></code></li>
+        <% end %>
+      </ol>
+    </section>
+  </div>
+</div>
+
+<%= render "xeno/dev_ui/styles" %>
+
+<script>
+  // Live updates ride xeno's own SSE endpoint — the dev UI dogfoods the API.
+  (function () {
+    var nextIndex = <%= (@events.last&.index || -1) + 1 %>;
+    var source = new EventSource("<%= session_stream_path(@session, start_index: (@events.last&.index || -1) + 1) %>");
+    var list = document.getElementById("event-list");
+    var reloadTypes = ["turn.completed", "turn.failed", "turn.cancelled", "session.waiting", "message.completed"];
+
+    ["session.started", "message.received", "turn.started", "step.started", "step.completed",
+     "actions.requested", "action.result", "input.requested", "reasoning.completed",
+     "message.completed", "compaction.requested", "compaction.completed",
+     "budget.exceeded", "turn.completed", "turn.failed", "turn.cancelled",
+     "session.waiting", "session.completed", "session.failed"].forEach(function (type) {
+      source.addEventListener(type, function (event) {
+        var li = document.createElement("li");
+        var envelope = JSON.parse(event.data);
+        li.value = envelope.meta.index;
+        li.innerHTML = "<code>" + type + "</code>";
+        list.appendChild(li);
+        if (reloadTypes.indexOf(type) !== -1) {
+          source.close();
+          setTimeout(function () { location.reload(); }, 300);
+        }
+      });
+    });
+
+    source.onerror = function () {
+      document.getElementById("live-dot").style.color = "#999";
+    };
+  })();
+</script>

@@ -1,0 +1,16 @@
+class Xeno::Tools::<%= class_name %> < Xeno::Tool
+  description "TODO: one line the model reads to decide when to call this."
+  parameter :input, description: "TODO: describe this parameter"
+
+  # Gate anything irreversible or externally visible:
+  # approval :always          # ask every time
+  # approval :once            # ask once per session
+  # approval ->(ctx) { ctx.principal&.dig("role") != "admin" }
+
+  def execute(input:)
+    # Full Rails access: models, jobs, credentials. Completed calls are
+    # recorded and never re-run, but a call interrupted mid-execution may
+    # retry — keep side effects idempotent or gate them with approval.
+    { result: input }
+  end
+end

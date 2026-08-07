@@ -1,0 +1,28 @@
+<div class="xeno-dev">
+  <h1>xeno · dev chat</h1>
+
+  <%= form_with url: dev_sessions_path, method: :post, local: true, class: "new-chat" do |f| %>
+    <%= f.text_field :message, placeholder: "Start a conversation…", required: true, autofocus: true %>
+    <%= f.submit "Send" %>
+  <% end %>
+
+  <h2>Sessions</h2>
+  <% if @sessions.any? %>
+    <table>
+      <tr><th>#</th><th>status</th><th>channel</th><th>started</th><th></th></tr>
+      <% @sessions.each do |session| %>
+        <tr>
+          <td>#<%= session.id %></td>
+          <td><span class="badge badge-<%= session.status %>"><%= session.status %></span></td>
+          <td><%= session.channel %></td>
+          <td><%= session.created_at.strftime("%b %-d %H:%M") %></td>
+          <td><%= link_to "open", dev_session_path(session) %></td>
+        </tr>
+      <% end %>
+    </table>
+  <% else %>
+    <p class="muted">No sessions yet — send a message above.</p>
+  <% end %>
+</div>
+
+<%= render "xeno/dev_ui/styles" %>

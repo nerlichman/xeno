@@ -1,0 +1,6 @@
+storage/
+log/
+tmp/
+.env
+Gemfile.lock
+charges.log

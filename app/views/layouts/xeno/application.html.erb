@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Xeno</title>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+
+  <%# The dev UI inlines its styles (_styles partial) — no asset-pipeline
+      link: standalone/mounted apps without propshaft would 404 on
+      /stylesheets/xeno/application.css on every page load. %>
+  <%= yield :head %>
+</head>
+<body>
+
+<%= yield %>
+
+</body>
+</html>
