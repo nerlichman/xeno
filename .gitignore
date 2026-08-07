@@ -1,0 +1,14 @@
+.bundle/
+# Gem convention: never commit lockfiles. Ours would also pin the DEV
+# resolution of the dual-source ruby_llm (path vs git), which breaks any
+# frozen bundle (CI) on the other side of the split.
+Gemfile.lock
+log/*.log
+pkg/
+test/dummy/db/*.sqlite3
+test/dummy/db/*.sqlite3-*
+test/dummy/log/*.log*
+test/dummy/storage/
+test/dummy/tmp/
+*.gem
+tmp/

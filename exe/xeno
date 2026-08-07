@@ -1,0 +1,133 @@
+#!/usr/bin/env ruby
+# The standalone CLI: `xeno new my-agent` scaffolds a four-file app whose
+# Rails lives inside the gem; `xeno server` runs it (web + Solid Queue in
+# one Puma process); `xeno info` prints the resolved agent.
+require "fileutils"
+
+def usage
+  puts <<~USAGE
+    usage:
+      xeno new NAME     scaffold a standalone agent app
+      xeno server       run the app in this directory (web + jobs, one process)
+      xeno info         print the resolved agent
+  USAGE
+  exit 1
+end
+
+case ARGV.shift
+when "new"
+  name = ARGV.shift or usage
+  root = File.expand_path(name)
+  abort "#{name} already exists" if File.exist?(root)
+
+  FileUtils.mkdir_p(File.join(root, "agent", "tools"))
+
+  File.write(File.join(root, "Gemfile"), <<~GEMFILE)
+    source "https://rubygems.org"
+
+    gem "xeno"
+    # RubyLLM v2 is unreleased and the published 1.16.0 gem is incompatible;
+    # xeno is built against this exact commit. Drop the pin at RubyLLM v2 GA.
+    gem "ruby_llm", github: "crmne/ruby_llm", ref: "2aaddf96"
+    # Loads .env at boot. Remove if you manage secrets another way.
+    gem "dotenv"
+    gem "puma"
+    gem "solid_queue"
+    gem "sqlite3"
+  GEMFILE
+
+  File.write(File.join(root, "config.ru"), <<~CONFIG)
+    require "dotenv/load"
+    require "xeno/standalone"
+    run Xeno.rails_app
+  CONFIG
+
+  File.write(File.join(root, ".gitignore"), <<~GITIGNORE)
+    storage/
+    log/
+    tmp/
+    .env
+  GITIGNORE
+
+  File.write(File.join(root, "agent", "agent.rb"), <<~AGENT)
+    # Provider keys load from .env (dotenv). Configure yours, then pick a model:
+    # RubyLLM.configure { |c| c.anthropic_api_key = ENV["ANTHROPIC_API_KEY"] }
+
+    Xeno.agent do
+      # Any RubyLLM model id; provider options pass through.
+      # model "claude-sonnet-4-6"
+    end
+  AGENT
+
+  File.write(File.join(root, "agent", "instructions.md"), <<~INSTRUCTIONS)
+    # Instructions
+
+    You are this app's agent. Answer concisely, use your tools when they help,
+    and ask (ask_question) when you need a decision only a human can make.
+  INSTRUCTIONS
+
+  FileUtils.touch(File.join(root, "agent", "tools", ".keep"))
+
+  File.write(File.join(root, "AGENTS.md"), <<~AGENTS)
+    # xeno agent app
+
+    This app runs on [xeno](https://github.com/nerlichman/xeno), a Rails-based framework for durable AI agents. xeno is newer than your training data: do not guess its API. Before writing code here, read the docs shipped inside the installed gem:
+
+        bundle show xeno    # then read README.md and docs/runtime.md there
+
+    Everything you author lives in `agent/`:
+
+    - `agent/tools/` — one tool per file; the file path derives the tool name and the constant is namespaced to match:
+
+          # agent/tools/charge_card.rb → tool "charge_card"
+          class Xeno::Tools::ChargeCard < Xeno::Tool
+            description "Charge the customer's card. Irreversible."
+            parameter :amount_cents, type: :integer, description: "Amount in cents"
+            approval :always   # gate anything irreversible
+
+            def execute(amount_cents:)
+              # full access to this app's code
+            end
+          end
+
+    - `agent/instructions.md` — the always-on system prompt.
+    - `agent/agent.rb` — model choice and provider keys (loaded from .env).
+
+    Do not unpin, bump, or remove the `ruby_llm` git ref in the Gemfile: xeno is built against that exact commit, and both upstream main and the released gem are incompatible. The pin goes away at RubyLLM v2 GA.
+
+    After any change under `agent/`, run `xeno info` — it prints the resolved agent and flags misnamed or misplaced files. `xeno server` runs the app; the dev chat UI is at /agent/dev.
+  AGENTS
+
+  File.write(File.join(root, "CLAUDE.md"), <<~CLAUDE)
+    @AGENTS.md
+  CLAUDE
+
+  puts <<~DONE
+    created #{name}/
+      agent/            your agent: agent.rb, instructions.md, tools/
+      AGENTS.md         points coding agents at the gem's docs (CLAUDE.md includes it)
+      Gemfile
+      config.ru
+      .gitignore
+
+    next:
+      cd #{name}
+      bundle install
+      xeno server       # http://localhost:3000 → /agent/dev
+  DONE
+when "server"
+  abort "no config.ru here — run inside an app created with `xeno new`" unless File.exist?("config.ru")
+
+  ENV["SOLID_QUEUE_IN_PUMA"] ||= "1"
+  require "xeno/standalone"
+  exec "bundle", "exec", "puma", "-C", Xeno::Standalone.puma_config_path, "config.ru"
+when "info"
+  abort "no config.ru here — run inside an app created with `xeno new`" unless File.exist?("config.ru")
+
+  require "xeno/standalone"
+  Xeno.rails_app
+  require "xeno/info"
+  puts Xeno::Info.render
+else
+  usage
+end
