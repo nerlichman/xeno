@@ -17,6 +17,8 @@ feedback.
 - **Upgrading a database created by 0.0.1 requires a fresh database.** The old
   migration stamps no longer exist, so there is no path forward from them — as the
   `0.0.x` line allows.
+- The `Gemfile` no longer prefers a local ruby_llm checkout when one happens to sit
+  next door. Development bundles the same pinned ref as everyone else.
 
 ## [0.0.1] - 2026-08-07
 

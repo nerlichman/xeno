@@ -1,7 +1,5 @@
 .bundle/
-# Gem convention: never commit lockfiles. Ours would also pin the DEV
-# resolution of the dual-source ruby_llm (path vs git), which breaks any
-# frozen bundle (CI) on the other side of the split.
+# Gem convention: never commit lockfiles.
 Gemfile.lock
 log/*.log
 pkg/

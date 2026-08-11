@@ -3,14 +3,9 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in xeno.gemspec.
 gemspec
 
-# The ref pin is load-bearing: upstream main and the released 1.16.0 gem are
-# both incompatible with xeno. Remove the pin at RubyLLM v2 GA.
-ruby_llm_clone = File.expand_path("../ruby_llm-original", __dir__)
-if File.directory?(ruby_llm_clone)
-  gem "ruby_llm", path: ruby_llm_clone
-else
-  gem "ruby_llm", github: "crmne/ruby_llm", ref: "2aaddf96"
-end
+# The ref pin is load-bearing: upstream main and the released 1.16.0 gem are both
+# incompatible with xeno. Remove the pin at RubyLLM v2 GA.
+gem "ruby_llm", github: "crmne/ruby_llm", ref: "2aaddf96"
 
 gem "puma"
 
