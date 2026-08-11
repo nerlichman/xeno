@@ -150,8 +150,7 @@ module Xeno
 
       contents = Array(turn.user_message&.fetch("contents", nil))
       ActiveRecord::Base.transaction do
-        resolved = definition.instructions_for(session: session)
-        @chat.with_instructions(resolved) if resolved
+        @chat.with_instructions(definition.instructions_for(session: session))
         contents.each { |content| @chat.add_message(role: :user, content: content) }
         turn.fenced_update!(token, transcript_deferred: false)
       end

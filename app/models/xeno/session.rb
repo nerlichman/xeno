@@ -63,10 +63,10 @@ module Xeno
       transaction do
         unless defer_transcript
           # with_instructions triggers the first to_llm build, so a fresh chat
-          # record must get its runtime options back first.
+          # record must get its runtime options back first. nil clears: an
+          # agent whose instructions were removed sheds the stale system row.
           chat.apply_runtime_options!(definition.config.model_options)
-          resolved = definition.instructions_for(session: self)
-          chat.with_instructions(resolved) if resolved
+          chat.with_instructions(definition.instructions_for(session: self))
           contents.each { |content| chat.add_message(role: :user, content: content) }
         end
         turn = Turn.append!(self, user_message: { contents: contents }, transcript_deferred: defer_transcript)

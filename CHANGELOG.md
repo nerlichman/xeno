@@ -18,6 +18,9 @@ feedback.
   to the unreleased migrations in place — **if you migrated a checkout of `main`
   before this change, recreate the database** (or add the three columns by hand);
   no released version is affected.
+- Removing an agent's instructions now takes effect at the next turn, the same way
+  editing them always has: staging clears the persisted system message when nothing
+  resolves, instead of silently keeping the stale one.
 - The engine's eight migrations are now two: `create_ruby_llm_tables` and
   `create_xeno_tables`. The old set replayed pre-release history — creating tables
   only to drop them again — through a database no install has ever had. Same final

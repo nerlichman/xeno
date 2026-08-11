@@ -141,4 +141,19 @@ class DynamicInstructionsTest < ActiveSupport::TestCase
     assert_includes systems.first, "Resolution #1."
     assert_includes systems.last, "Resolution #2.", "each turn stage resolves fresh"
   end
+
+  test "removing the instructions takes effect at the next turn, like editing them does" do
+    fake = start_fake_llm { |_body| FakeLLM.text("ok") }
+
+    session = Xeno::Session.open!(message: "one", definition: TestDefinition.new(instructions: "Be brief."))
+    Xeno::TurnRunner.new(session.turns.sole, definition: TestDefinition.new(instructions: "Be brief.")).run
+
+    bare = TestDefinition.new(instructions: nil)
+    session.stage_turn!("two", definition: bare)
+    Xeno::TurnRunner.new(session.turns.order(:sequence).last, definition: bare).run
+
+    systems = fake.requests.map { |r| r["messages"].find { |m| m["role"] == "system" } }
+    assert_equal "Be brief.", systems.first["content"]
+    assert_nil systems.last, "the stale system row is cleared once no instructions resolve"
+  end
 end
