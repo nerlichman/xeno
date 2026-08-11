@@ -205,6 +205,14 @@ module Xeno
       tool_class = definition.tools[call.name]
       return false unless tool_class.respond_to?(:approval)
 
+      # A tool declaring RubyLLM's requires_approval without a xeno policy is
+      # asking for a gate; running it ungated would betray that declaration.
+      # An explicit xeno policy (even :never) wins.
+      if tool_class.respond_to?(:approval_declared?) && !tool_class.approval_declared? &&
+         tool_class.respond_to?(:requires_approval?) && tool_class.requires_approval?
+        return true
+      end
+
       policy = tool_class.approval
       case policy
       when :never, nil then false

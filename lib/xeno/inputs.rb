@@ -12,6 +12,7 @@ module Xeno
     def approve!(action, principal: nil)
       resolve(action) do
         action.update!(status: "approved", resolved_at: Time.current, resolved_by: principal)
+        mirror_decision(action, "approved")
       end
     end
 
@@ -24,6 +25,7 @@ module Xeno
           resolved_at: Time.current,
           resolved_by: principal
         )
+        mirror_decision(action, "denied")
       end
     end
 
@@ -38,6 +40,17 @@ module Xeno
           resolved_by: principal
         )
       end
+    end
+
+    # The action row stays authoritative (kind, payload, who, when); the
+    # decision is mirrored onto the standard tool-call column so any
+    # RubyLLM-aware tooling reads it natively. Questions have no place
+    # there and are not mirrored.
+    def mirror_decision(action, decision)
+      return unless action.kind == "tool"
+
+      record = RubyLLM::ActiveRecord::ToolCall.find_by(tool_call_id: action.tool_call_id)
+      record&.update!(approval: decision)
     end
 
     # Shared plumbing: guard the state, apply the resolution, resume when

@@ -43,6 +43,11 @@ module Xeno
 
         superclass.respond_to?(:approval) ? superclass.approval : :never
       end
+
+      def approval_declared? # :nodoc:
+        (defined?(@approval) && !@approval.nil?) ||
+          (superclass.respond_to?(:approval_declared?) && superclass.approval_declared?)
+      end
     end
 
     # RubyLLM derives the wire name from the full class name, which would

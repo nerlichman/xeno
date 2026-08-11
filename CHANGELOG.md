@@ -8,6 +8,12 @@ feedback.
 
 ## [Unreleased]
 
+- Approval decisions mirror onto the standard `ruby_llm_tool_calls.approval`
+  column, so RubyLLM-aware tooling reads them natively. The action row stays
+  authoritative; questions are not mirrored.
+- A tool that declares RubyLLM's `requires_approval` and no xeno `approval` policy
+  now parks for approval instead of executing ungated. An explicit xeno policy,
+  including `:never`, still wins.
 - The `ruby_llm` pin moved from `2aaddf96` to `be80b6f1` (145 commits of upstream v2
   development). No xeno API usage changed; the bundle swaps `ruby_llm-schema` for
   `schematist`. The scaffold Gemfile and README point at the new ref.

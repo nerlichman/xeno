@@ -20,6 +20,21 @@ class ParkingTest < ActiveSupport::TestCase
     end
   end
 
+  class WireTransfer < Xeno::Tool
+    description "Wire funds. Irreversible."
+    parameter :amount_cents, type: :integer, description: "Amount in cents"
+    requires_approval
+
+    class << self
+      attr_accessor :executions
+    end
+
+    def execute(amount_cents:)
+      self.class.executions += 1
+      { wired: amount_cents }
+    end
+  end
+
   class SendReport < Xeno::Tool
     description "Send the weekly report."
     approval :once
@@ -61,6 +76,7 @@ class ParkingTest < ActiveSupport::TestCase
     ChargeCard.executions = 0
     SendReport.executions = 0
     Echo.executions = 0
+    WireTransfer.executions = 0
   end
 
   def start_session(definition, message: "go", principal: nil)
@@ -76,6 +92,25 @@ class ParkingTest < ActiveSupport::TestCase
         FakeLLM.tool_call("charge_card", { amount_cents: 4200 }, id: call_id)
       end
     end
+  end
+
+  test "RubyLLM's requires_approval gates a tool with no xeno policy" do
+    script = ->(body) do
+      if FakeLLM.tool_result?(body)
+        FakeLLM.text("wired, all done")
+      else
+        FakeLLM.tool_call("wire_transfer", { amount_cents: 4200 }, id: "call_wire_1")
+      end
+    end
+    start_fake_llm(&script)
+    definition = TestDefinition.new(tools: { "wire_transfer" => WireTransfer })
+    session, turn = start_session(definition)
+
+    assert_equal :parked, Xeno::TurnRunner.new(turn, definition: definition).run
+
+    assert_equal 0, WireTransfer.executions, "a requires_approval tool must not run ungated"
+    assert_equal "pending_approval", turn.actions.sole.status
+    assert_equal "waiting", session.reload.status
   end
 
   test "approval :always parks the turn without executing" do
@@ -109,6 +144,8 @@ class ParkingTest < ActiveSupport::TestCase
     action = turn.actions.sole
     Xeno::Inputs.approve!(action, principal: { "user" => "nicolas" })
 
+    mirrored = RubyLLM::ActiveRecord::ToolCall.find_by(tool_call_id: action.tool_call_id)
+    assert_equal "approved", mirrored.approval, "decision mirrors to the standard column"
     assert_equal "pending", turn.reload.status, "resume flips waiting back to pending"
     assert_equal "running", session.reload.status
 
