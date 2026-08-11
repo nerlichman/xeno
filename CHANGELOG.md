@@ -8,6 +8,16 @@ feedback.
 
 ## [Unreleased]
 
+- The engine's eight migrations are now two: `create_ruby_llm_tables` and
+  `create_xeno_tables`. The old set replayed pre-release history — creating tables
+  only to drop them again — through a database no install has ever had. Same final
+  schema, none of the churn. Each `ruby_llm_*` table is skipped if the database
+  already has it, so a host app that ran ruby_llm's own installer keeps what it
+  owns.
+- **Upgrading a database created by 0.0.1 requires a fresh database.** The old
+  migration stamps no longer exist, so there is no path forward from them — as the
+  `0.0.x` line allows.
+
 ## [0.0.1] - 2026-08-07
 
 The first public release of xeno, a framework for durable AI agents built on Rails:
