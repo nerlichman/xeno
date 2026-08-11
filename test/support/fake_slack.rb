@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A fake Slack Web API: records chat.postMessage and chat.update calls and
 # answers ok. Same shape as FakeLLM — thread in the test process, ephemeral
 # port. Set `update_responses` to script rate limits (e.g. one 429).

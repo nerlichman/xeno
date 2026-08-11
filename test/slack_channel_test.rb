@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # The Slack channel, fully offline: signed Events API webhooks in, a fake

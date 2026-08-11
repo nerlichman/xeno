@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # Models send JSON-typed arguments loosely — the first field run had
   # llama sending "4200" (String) for an integer-typed parameter, which
@@ -5,7 +7,7 @@ module Xeno
   # declared parameter type; anything uncoercible becomes a validation
   # error the runner turns into an error tool result (the model retries
   # with fixed arguments) — never an exception into execute.
-  module Arguments
+  module Arguments # :nodoc:
     module_function
 
     # Returns [coerced_arguments, errors]. Undeclared keys pass through

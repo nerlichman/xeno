@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # The one framework tool in v0.1. It has no executable body: the model
   # calling it parks the turn with an input.requested event, and a human's

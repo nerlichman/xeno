@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # The session event stream: SSE by default, NDJSON on request
   # (`?format=ndjson` or `Accept: application/x-ndjson` — one envelope per
@@ -8,7 +10,7 @@ module Xeno
   #
   # Known limitation (documented): ActionController::Live holds a thread
   # per connected client.
-  class StreamsController < ApiController
+  class StreamsController < ApiController # :nodoc:
     include ActionController::Live
 
     KEEPALIVE_INTERVAL = 5 # seconds without a write before a ping

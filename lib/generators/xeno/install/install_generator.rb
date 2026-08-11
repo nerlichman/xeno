@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   module Generators
     # Mounted-mode install: initializer, engine mount, migrations, and the

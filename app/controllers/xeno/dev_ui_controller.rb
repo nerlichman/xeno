@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 module Xeno
   # The mounted dev chat UI: chat with the
   # agent, watch the event stream live (over xeno's own SSE endpoint), and
   # approve/deny/answer parked work. Development only.
-  class DevUiController < ApplicationController
+  class DevUiController < ApplicationController # :nodoc:
     before_action :ensure_development
 
     def index

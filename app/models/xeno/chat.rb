@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # The persisted RubyLLM chat backing one session's transcript.
   # Owned by xeno — host apps with their own acts_as chat classes are

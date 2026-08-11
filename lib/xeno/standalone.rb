@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Standalone mode: Rails as an implementation detail. A scaffolded app is
 # a handful of visible files (agent/, Gemfile, config.ru, .gitignore); the
 # entire Rails::Application lives HERE, inside the gem.
@@ -64,7 +66,7 @@ module Xeno
     config.secret_key_base = ENV["SECRET_KEY_BASE"] || Xeno::Standalone.local_secret(APP_ROOT)
   end
 
-  module Standalone
+  module Standalone # :nodoc:
     module_function
 
     # Boot: initialize the app, then bring the database up to date — the

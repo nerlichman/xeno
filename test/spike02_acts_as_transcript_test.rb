@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# Spike #2 — the spike-01 park/kill/rehydrate/inject/resume flow, run through
+# The park/kill/rehydrate/inject/resume flow, run through
 # RubyLLM's Rails acts_as persistence on xeno-owned tables. This decides the
-# M3 schema: transcript-on-acts_as vs. our own serializer tables.
+# Transcript on acts_as, rather than our own serializer tables.
 #
 # "Process death" is modeled as dropping every in-memory object and reloading
 # from the database with fresh ActiveRecord instances — the DB rows are the

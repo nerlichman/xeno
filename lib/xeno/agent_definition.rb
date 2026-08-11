@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # The resolved agent: everything discovered under the app's agent/
   # directory, plus diagnostics for anything misplaced or broken.

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # Messages that arrived while a turn was running. Drained into the next
   # turn when the session parks or the turn completes.

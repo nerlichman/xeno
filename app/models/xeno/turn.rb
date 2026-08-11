@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # One user message and all work until the agent responds. Runs as one
   # ActiveJob. Correctness lives here, in the database, not in the queue:
@@ -10,14 +12,13 @@ module Xeno
   #    a zombie that wakes up after being reaped affects zero rows.
   # 4. Max attempts — poison turns become turn.failed, not infinite retries.
   class Turn < ApplicationRecord
-    STATUSES = %w[pending running waiting completed failed cancelled].freeze
-    KINDS = %w[message compaction].freeze
+    enum :status, %w[pending running waiting completed failed cancelled].index_with(&:itself), validate: true
+    enum :kind, %w[message compaction].index_with(&:itself), prefix: true, validate: true
 
     belongs_to :session, class_name: "Xeno::Session"
     has_many :actions, class_name: "Xeno::Action", dependent: :destroy
 
-    validates :status, inclusion: { in: STATUSES }
-    validates :kind, inclusion: { in: KINDS }
+    scope :active, -> { where(status: %w[pending running waiting]) }
 
     # Appends the next turn to the session, sequence assigned race-safely.
     # The INSERT runs in its own savepoint (requires_new): stage_turn! calls
@@ -72,7 +73,7 @@ module Xeno
       earlier_active = self.class
         .where(session_id: session_id)
         .where("sequence < ?", sequence)
-        .where(status: %w[pending running waiting])
+        .active
 
       claimed = self.class
         .where(id: id, claim_token: current.claim_token)

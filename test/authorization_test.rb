@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# H4 regression: per-principal authorization. The principal was stamped on
+# Regression: per-principal authorization. The principal was stamped on
 # sessions but never checked — any authenticated caller could approve any
 # session's pending tool call, cancel/reset any session, and read any
 # session's stream (IDOR). Ownership rule: a session belongs to the

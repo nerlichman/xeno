@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # The config DSL evaluated from agent/agent.rb. Optional — defaults apply
   # when the file is absent.

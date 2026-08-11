@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 module Xeno
   # Resolving parked work: approvals, denials, and question answers. Each
   # resolution updates the action and — once no other action on the turn is
   # still awaiting input — flips the turn back to pending and enqueues the
   # resume job. A parked session holds zero compute; this is the only way
   # back in.
-  module Inputs
+  module Inputs # :nodoc:
     module_function
 
     def approve!(action, principal: nil)

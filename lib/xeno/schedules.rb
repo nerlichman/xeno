@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "yaml"
 
 module Xeno
@@ -11,7 +13,7 @@ module Xeno
   # development, where the dispatch endpoint triggers by name. The REAPER
   # entry is different: it's runtime infrastructure (turns with no live
   # owner), so it goes into every section including development.
-  module Schedules
+  module Schedules # :nodoc:
     MANAGED_PREFIX = "xeno_".freeze
     REAPER_KEY = "#{MANAGED_PREFIX}runtime_reaper".freeze
 

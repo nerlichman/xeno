@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Gem-owned puma config for standalone mode (`xeno server`): the whole
 # stack — web + Solid Queue supervisor — inside one Puma process.
 threads_count = ENV.fetch("RAILS_MAX_THREADS", 5).to_i

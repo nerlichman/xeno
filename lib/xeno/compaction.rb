@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # Summarize-and-replace compaction, mixed into TurnRunner and executed as
   # a claimed turn (kind: "compaction"). Riding the turn machinery buys the
@@ -14,7 +16,7 @@ module Xeno
   # written into the earliest compacted row so both id- and created_at-
   # ordering keep it in place, and the remaining rows are destroyed
   # newest-first (results before the tool_calls they reference).
-  module Compaction
+  module Compaction # :nodoc:
     SUMMARY_PREFIX = "[Conversation summary — earlier messages were compacted]".freeze
 
     COMPACTION_PROMPT = <<~PROMPT.freeze

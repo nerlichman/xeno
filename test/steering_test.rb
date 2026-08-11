@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# M4: steering — opt-in "stop what you're doing, do THIS instead". A parked
+# steering — opt-in "stop what you're doing, do THIS instead". A parked
 # or pending turn settles (H1 machinery) and cancels immediately; a running
 # turn cancels cooperatively at the next step boundary with the steer
 # message queued to become the next turn; an idle session just gets a turn.

@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# H5 (first half) regression: a raising tool used to bubble into the
+# Regression: a raising tool used to bubble into the
 # queue's retry ladder — no action row recorded, so every retry re-ran the
 # tool (side effects!), and after retry_on exhausted the turn wedged
 # pending forever. The exception now becomes an error tool result the

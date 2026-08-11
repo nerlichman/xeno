@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # Phase-2 hardening regressions: the stale persisted-cancel flag (H), tool

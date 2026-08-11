@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# H1 regression: cancelling a parked turn used to leave the assistant
+# Regression: cancelling a parked turn used to leave the assistant
 # tool_call rows unanswered forever — every later generate replayed the
 # malformed transcript (a provider 400 on every subsequent turn), bricking
 # the session. Settlement injects a tool result for every dangling call

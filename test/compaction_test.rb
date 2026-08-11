@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# M2: threshold-triggered summarize-and-replace compaction, executed as a
+# threshold-triggered summarize-and-replace compaction, executed as a
 # claimed turn (kind: "compaction") so it inherits exclusivity, session
 # ordering (queues behind active/parked turns), and crash-safe replay.
 class CompactionTest < ActiveSupport::TestCase

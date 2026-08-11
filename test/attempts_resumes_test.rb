@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# H2 regression: `attempts` used to count every claim — including approval
+# Regression: `attempts` used to count every claim — including approval
 # resumes — so the 5th approval on one turn tripped the poison branch,
 # failed the turn AND finished the whole session. Attempts now counts only
 # failures (transient errors, crash reclaims); resumes are counted apart

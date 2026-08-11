@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 module Xeno
   # The Slack Events API endpoint. The generic auth lambda is skipped —
   # Slack's own request signature IS the authentication (verified in
   # constant time), and it fails closed: no configured slack channel = 404,
   # bad or stale signature = 401.
-  class SlackController < ApiController
+  class SlackController < ApiController # :nodoc:
     skip_before_action :authenticate!
 
     def events

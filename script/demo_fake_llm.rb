@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The demo's stand-in model: asks for charge_card once, then answers with
 # the receipt. Run by script/demo.sh; port via FAKE_LLM_PORT.
 require_relative "../test/support/fake_llm"

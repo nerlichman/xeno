@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A hand-built agent definition for runtime tests: fake-model over the
 # FakeLLM server, tools injected per test.
 class TestDefinition

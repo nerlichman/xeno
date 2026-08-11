@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 namespace :xeno do
   desc "Print the resolved agent: config, instructions, tools, diagnostics"
   task info: :environment do

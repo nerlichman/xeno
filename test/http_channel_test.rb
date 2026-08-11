@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # The HTTP channel contract: fail-closed auth, principal stamping, the

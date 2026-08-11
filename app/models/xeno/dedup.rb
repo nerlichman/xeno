@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # The at-least-once dedup ledger. Redelivered work (a cron tick fired
   # twice, a Slack retry storm) claims its (scope, key) once; every other

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # Hardening: API error paths respond with structured JSON, never 500s.

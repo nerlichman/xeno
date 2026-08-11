@@ -1,10 +1,10 @@
+# frozen_string_literal: true
+
 module Xeno
   # The append-only session stream — also the audit log. `index` is the
   # per-session cursor; consumers dedupe
   # re-emitted events by (session, index).
   class Event < ApplicationRecord
-    belongs_to :session, class_name: "Xeno::Session"
-
     # The fixed vocabulary (docs/runtime.md § Events). Hooks may subscribe
     # to any of these or "*".
     TYPES = %w[
@@ -17,6 +17,8 @@ module Xeno
       turn.completed turn.failed turn.cancelled
       session.waiting session.completed session.failed
     ].freeze
+
+    belongs_to :session, class_name: "Xeno::Session"
 
     # Hooks fire only after the row is durably committed (and therefore
     # visible to other processes) — never inside the emitting transaction.

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # Observe-only event handlers from agent/hooks/*.rb:
   #

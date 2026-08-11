@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # The channel registry. A channel (a) normalizes platform input into user
   # messages, (b) owns the session's continuation token, and (c) decides

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   module Generators
     # rails g xeno:tool GetWeather → agent/tools/get_weather.rb

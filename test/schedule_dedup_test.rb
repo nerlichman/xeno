@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# M1(d): at-least-once cron redelivery must not double-run a schedule. Each
+# at-least-once cron redelivery must not double-run a schedule. Each
 # enqueue's job_id claims a dedup row in the same transaction that opens the
 # session; a redelivered job re-drives the RECORDED turn (claim CAS makes
 # that a no-op when the first delivery finished) instead of opening a second

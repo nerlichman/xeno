@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require "test_helper"
 require "sqlite3"
 
-# M1(e), deploy-style: a REAL Solid Queue worker is SIGTERMed mid-turn (during
+# Deploy-style: a REAL Solid Queue worker is SIGTERMed mid-turn (during
 # a slow model call). The graceful-shutdown checkpoint hands the turn back
 # (claim released, job re-enqueued) inside the worker's 5s shutdown window,
 # and a fresh worker resumes it promptly — no stale-heartbeat wait, no crash

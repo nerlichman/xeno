@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # Proves the deterministic test harness: RubyLLM's decomposed v2 loop

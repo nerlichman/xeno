@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require "test_helper"
 require "xeno/schedules"
 
-# H5 (second half) regression: nothing owned turns that fell out of the
+# Regression: nothing owned turns that fell out of the
 # retry ladder. The reaper re-enqueues work with no live owner — the
 # mid-step-kill wedge (running + stale heartbeat, job dead in the queue's
 # failed set) and the approve-then-crash orphan (all actions resolved, no

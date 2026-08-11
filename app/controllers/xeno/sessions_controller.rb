@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 module Xeno
   # The HTTP channel: always mounted, fail-closed. The channel owns the
   # continuation token (the resume handle): create returns one, follow-up
   # messages must present it, terminal states release it, reset retires the
   # session so the same token can start fresh.
-  class SessionsController < ApiController
+  class SessionsController < ApiController # :nodoc:
     # POST /v1/sessions { message:, continuation_token: (optional) }
     # Client-supplied tokens are restricted to the reserved `http:`
     # namespace — a crafted `slack:<channel>:<ts>` token would otherwise

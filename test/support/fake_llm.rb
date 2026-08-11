@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A deterministic OpenAI-Chat-Completions-compatible server standing in for a model.
 # Generalized from spikes/01_parking/fake_llm_server.rb — this is the test suite's
 # primary engine (the mockModel equivalent): zero cost, zero flake, fully offline.

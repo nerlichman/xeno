@@ -1,17 +1,17 @@
+# frozen_string_literal: true
+
 module Xeno
   # The durable conversation: lives for days or weeks, owns the transcript
   # chat, the turn ledger, and the append-only event stream. Identified by
   # id (inspect/stream handle) and at most one continuation_token (the
   # channel-owned resume handle, unique among active sessions).
   class Session < ApplicationRecord
-    STATUSES = %w[running waiting completed failed].freeze
+    enum :status, %w[running waiting completed failed].index_with(&:itself), validate: true
 
     belongs_to :chat, class_name: "Xeno::Chat"
     has_many :turns, class_name: "Xeno::Turn", dependent: :destroy
     has_many :events, class_name: "Xeno::Event", dependent: :destroy
     has_many :pending_messages, class_name: "Xeno::PendingMessage", dependent: :destroy
-
-    validates :status, inclusion: { in: STATUSES }
 
     # Opens a session for a first user message: builds the transcript chat
     # per the resolved agent definition, stamps channel + principal, and
@@ -62,8 +62,8 @@ module Xeno
       contents = Array(messages)
       transaction do
         unless defer_transcript
-          # Finding K: with_instructions triggers the first to_llm build; a
-          # fresh chat record must get its runtime options back first.
+          # with_instructions triggers the first to_llm build, so a fresh chat
+          # record must get its runtime options back first.
           chat.apply_runtime_options!(definition.config.model_options)
           resolved = definition.instructions_for(session: self)
           chat.with_instructions(resolved) if resolved
@@ -82,15 +82,15 @@ module Xeno
     # (one active turn per session) the message queues in pending_messages
     # and is folded into the next turn; a PARKED session drains immediately
     # (the message becomes a visible staged turn instead of sitting invisible
-    # until someone resolves the input — mvp-design's delivery semantics).
+    # until someone resolves the input).
     # An idle session stages and enqueues a turn right away.
     def receive_message!(content)
-      if turns.where(status: %w[pending running waiting]).exists?
+      if turns.active.exists?
         transaction do
           pending_messages.create!(payload: { "content" => content })
           emit("message.received", { content: content, queued: true })
         end
-        drain_pending_messages! if reload.status == "waiting"
+        drain_pending_messages! if reload.waiting?
         nil
       else
         turn = stage_turn!(content)
@@ -128,7 +128,7 @@ module Xeno
     # next step boundary). If the cancel loses the race with a completing
     # turn, steering degrades to a normal follow-up — never an error.
     def steer!(content, definition: Xeno.definition)
-      turn = turns.where(status: %w[pending running waiting]).order(:sequence).first
+      turn = turns.active.order(:sequence).first
 
       case turn&.status
       when nil # idle: steer is just a message
@@ -147,7 +147,7 @@ module Xeno
           settle_unanswered_tool_calls!(turn, reason: "steered by user")
           turn.update!(status: "cancelled")
           emit("turn.cancelled", { turn_id: turn.id, steer: true })
-          update!(status: "running") if status == "waiting"
+          update!(status: "running") if waiting?
         end
         staged = stage_turn!(content, definition: definition)
         staged.enqueue!
@@ -212,7 +212,7 @@ module Xeno
     end
 
     def active?
-      %w[running waiting].include?(status)
+      running? || waiting?
     end
 
     # Terminal states release the continuation token (a finished session must

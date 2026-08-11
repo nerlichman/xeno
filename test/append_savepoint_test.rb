@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# H3 regression: Event.append! and Turn.append! retry create! after a unique
+# Regression: Event.append! and Turn.append! retry create! after a unique
 # violation, and both are routinely called INSIDE enclosing transactions
 # (emit in open!/stage_turn!/finish!, Turn.append! in stage_turn!). On
 # Postgres a failed INSERT aborts the whole transaction — the retry raises

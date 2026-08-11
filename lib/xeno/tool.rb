@@ -1,7 +1,8 @@
+# frozen_string_literal: true
+
 module Xeno
-  # Base class for agent tools. Anyone who knows RubyLLM already knows how
-  # to write these; xeno adds discovery and (later) the approval macro and
-  # session context.
+  # Base class for agent tools: a RubyLLM::Tool with path-derived naming, an
+  # approval policy, and access to the running session.
   #
   #   # agent/tools/get_weather.rb
   #   class Xeno::Tools::GetWeather < Xeno::Tool

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # ruby_llm 2aaddf96 owns the model registry: including ActsAs (which

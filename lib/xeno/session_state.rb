@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # The per-session KV store: working state for
   # ONE conversation. JSON-typed — values round-trip through JSON, so

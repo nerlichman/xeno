@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 module Xeno
   # Base for every engine endpoint. Auth fails closed: without a configured
   # authenticate lambda, everything is 401. The lambda receives the request;
   # a falsy return is a 401; its truthy return value is the request
   # principal (stamped onto sessions by the HTTP channel).
-  class ApiController < ActionController::API
+  class ApiController < ActionController::API # :nodoc:
     before_action :authenticate!
 
     rescue_from ActiveRecord::RecordNotFound do

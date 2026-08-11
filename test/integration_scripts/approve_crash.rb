@@ -1,4 +1,6 @@
-# M1(b)'s kill window, made real: a queue backend whose enqueue happens
+# frozen_string_literal: true
+
+# The kill window, made real: a queue backend whose enqueue happens
 # AFTER the resolution transaction commits (ActiveJob's deferred
 # enqueue_after_transaction_commit mode), with the process dying between
 # the commit and the enqueue. The committed state is the orphan the reaper

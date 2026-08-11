@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# M5: the session-scoped KV store — typed (JSON) values, accessible from
+# the session-scoped KV store — typed (JSON) values, accessible from
 # tool code, persisted (survives restarts; the kill -9 proof lives in
 # park_kill_resume_test), never crossing sessions, cleared by reset.
 class SessionStateTest < ActiveSupport::TestCase

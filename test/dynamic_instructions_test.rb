@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require "test_helper"
 require "xeno/info"
 
-# M3: agent/instructions.rb — dynamic instructions resolved at turn-stage
+# agent/instructions.rb — dynamic instructions resolved at turn-stage
 # time with the session context (the current_user use case), composed with
 # the static instructions.md (static first, dynamic appended).
 class DynamicInstructionsTest < ActiveSupport::TestCase

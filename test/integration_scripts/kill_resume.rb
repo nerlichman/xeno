@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Runs inside the dummy app via `bin/rails runner` — one phase per process.
 #
 #   MODE=park:   opens a session whose turn executes record_alpha (recorded,

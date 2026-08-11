@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # Drives one turn to completion (or to a park). This is the durable core:
   # RubyLLM's decomposed v2 loop (`generate` + self-executed tools +
@@ -13,7 +15,7 @@ module Xeno
   # - Every write is fenced on the claim token; zombies affect zero rows.
   # - Trailing blank assistant rows (the mid-generate crash window) are
   #   removed before deciding anything (spike #2, hazard 1).
-  class TurnRunner
+  class TurnRunner # :nodoc:
     include Compaction
 
     attr_reader :turn, :session, :definition, :token
@@ -118,9 +120,9 @@ module Xeno
       Chat.where(id: @chat.id, cancelled: true).update_all(cancelled: false)
     end
 
-    # Spike #2, hazard 1: a process killed mid-generate leaves a blank
-    # assistant row that reads as a completed turn. Trailing blank assistant
-    # rows (no content, no tool calls) are crash artifacts — delete them.
+    # A process killed mid-generate leaves a blank assistant row that reads as
+    # a completed turn. Trailing blank assistant rows (no content, no tool
+    # calls) are crash artifacts — delete them.
     def remove_crash_artifacts
       loop do
         last = @chat.messages_association.order(:id).last
@@ -477,7 +479,7 @@ module Xeno
     # Parking: the pending actions are recorded, the turn is waiting, and the
     # job ENDS — no process waits. Input resolution enqueues the resume.
     # Messages that queued behind this turn become visible NOW as a staged
-    # (deferred) next turn — mvp-design's drain-on-park delivery semantics.
+    # (deferred) next turn.
     def park_turn(actions = [])
       turn.fenced_update!(token, status: "waiting")
       session.update!(status: "waiting")

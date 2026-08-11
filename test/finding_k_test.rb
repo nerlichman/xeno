@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# Finding K regression (field-confirmed): assume_model_exists and protocol
+# Regression, field-confirmed: assume_model_exists and protocol
 # are runtime attributes, not columns. The SECOND message of a session
 # stages through a freshly loaded chat record, and with_instructions
 # triggers the first to_llm build — which resolved the model strictly

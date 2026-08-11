@@ -155,6 +155,8 @@ Xeno.configure do |config|
 end
 ```
 
+Every knob is listed in [docs/configuration.md](docs/configuration.md).
+
 Development with no lambda configured stays usable on localhost; everywhere else the absence of a checker is a 401.
 
 The principal is also the ownership boundary: a session belongs to the principal stamped at creation, and every session-scoped endpoint returns 404 for any other principal. See `docs/runtime.md` for the authorization rules.

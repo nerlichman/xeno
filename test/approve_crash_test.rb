@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require "test_helper"
 require "open3"
 
-# M1(b): approve→resume is crash-safe.
+# approve→resume is crash-safe.
 #
 # 1. The atomic path (regression, failed pre-fix): resolution + status flip +
 #    enqueue commit in ONE transaction — a failed enqueue rolls the whole

@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# M1(e): the graceful-shutdown checkpoint (AJ Continuation's stopping? probe,
+# the graceful-shutdown checkpoint (AJ Continuation's stopping? probe,
 # adopted per the durable-orchestration landscape doc). Between runner steps a
 # stopping worker releases the claim and re-enqueues the turn instead of dying
 # mid-step and waiting out stale-heartbeat reclaim — a deploy resumes promptly

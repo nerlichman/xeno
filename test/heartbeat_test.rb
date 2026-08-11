@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# M1(a) regression: a model call or tool body slower than turn_stale_after
+# Regression: a model call or tool body slower than turn_stale_after
 # must NOT be reclaimed mid-flight. The runner's background heartbeat keeps
 # the claim visibly alive while the worker thread is buried in the call;
 # before the fix the heartbeat only moved at step boundaries, so a competing

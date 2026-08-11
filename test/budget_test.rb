@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# M6: per-session token budgets — checked independently per axis BEFORE
+# per-session token budgets — checked independently per axis BEFORE
 # each model call from persisted usage; the crossing call finishes and the
 # NEXT one trips deterministically (budget.exceeded + turn.failed). Reset
 # recovers.

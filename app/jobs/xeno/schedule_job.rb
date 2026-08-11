@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # Fires one scheduled run: a fire-and-forget task-mode session under the
   # app principal. Solid Queue recurring entries (rake xeno:schedules:sync)
@@ -9,7 +11,7 @@ module Xeno
   # SAME transaction that opens the session, so a redelivered tick can
   # never double-open — it re-enqueues the recorded turn instead (idle
   # no-op if the first delivery finished: the claim CAS decides).
-  class ScheduleJob < ApplicationJob
+  class ScheduleJob < ApplicationJob # :nodoc:
     queue_as :default
 
     discard_on ArgumentError

@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
-# M1(c): drain-on-park — mvp-design's delivery semantics. Messages queued
+# Drain-on-park. Messages queued
 # behind a turn become a VISIBLE staged turn the moment the session parks
 # (and messages sent to an already-parked session stage immediately),
 # instead of sitting invisible until a human resolves the input. The staged

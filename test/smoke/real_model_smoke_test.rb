@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # Real-model smoke: a live model on NVIDIA's OpenAI-compatible endpoint

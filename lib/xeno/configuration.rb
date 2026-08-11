@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Xeno
   # Gem-level runtime knobs, set from an initializer:
   #

@@ -1,10 +1,11 @@
+# frozen_string_literal: true
+
 require "test_helper"
 require "open3"
 
-# M4's definition of done: park → REAL process kill → fresh process resume →
+# The durability arc end to end: park → REAL process kill → fresh process resume →
 # completion, through the full runtime (Session.open! + TurnJob + the dummy
 # app's real agent/ directory with its approval-gated charge_card tool).
-# Spike #1, elevated to an integration test.
 class ParkKillResumeTest < ActiveSupport::TestCase
   self.use_transactional_tests = false
 

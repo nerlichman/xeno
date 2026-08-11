@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 Xeno::Engine.routes.draw do
   scope "v1" do
     get "health", to: "health#show"

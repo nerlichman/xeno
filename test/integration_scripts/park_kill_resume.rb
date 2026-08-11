@@ -1,4 +1,6 @@
-# M4's spike-#1-elevated integration: the FULL runtime (Session.open! with
+# frozen_string_literal: true
+
+# The FULL runtime (Session.open! with
 # the dummy app's real agent definition, TurnJob, approval gate) across two
 # short-lived processes.
 #
@@ -17,7 +19,7 @@ when "park"
   turn = session.turns.order(:sequence).last
   Xeno::TurnJob.perform_now(turn.id)
 
-  # M5: session state must survive the kill (rows are the only survivor).
+  # session state must survive the kill (rows are the only survivor).
   session.state.update("written" => "before the kill", "count" => 1)
 
   turn.reload
