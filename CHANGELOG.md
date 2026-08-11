@@ -8,6 +8,16 @@ feedback.
 
 ## [Unreleased]
 
+- The `ruby_llm` pin moved from `2aaddf96` to `be80b6f1` (145 commits of upstream v2
+  development). No xeno API usage changed; the bundle swaps `ruby_llm-schema` for
+  `schematist`. The scaffold Gemfile and README point at the new ref.
+- The transcript tables mirror upstream's current install template: tool calls gain
+  an `approval` column, messages gain `server_tool_calls` and `raw_content`. All
+  three are read behind column guards, so existing behavior is unchanged; they exist
+  so the schema matches what the pinned ruby_llm can persist. The columns were added
+  to the unreleased migrations in place — **if you migrated a checkout of `main`
+  before this change, recreate the database** (or add the three columns by hand);
+  no released version is affected.
 - The engine's eight migrations are now two: `create_ruby_llm_tables` and
   `create_xeno_tables`. The old set replayed pre-release history — creating tables
   only to drop them again — through a database no install has ever had. Same final

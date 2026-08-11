@@ -37,8 +37,8 @@ claim! (CAS) → clean crash artifacts → loop:
 
 Rules inherited from the RubyLLM v2 investigation (each empirically verified):
 
-1. Never `complete` (unbounded) or `run_tools` (re-executes everything on retry). The
-   runner IS the loop.
+1. Never `complete` (a turn must bound its model calls) or `run_tools` (no approval
+   gate, no per-call action checkpoint). The runner IS the loop.
 2. A killed process leaves a blank assistant row (`before_message` persists it before
    the HTTP call) that makes `complete?` read true — trailing blank assistant rows are
    deleted on entry.

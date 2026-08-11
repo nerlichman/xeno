@@ -28,7 +28,7 @@ when "new"
     gem "xeno"
     # RubyLLM v2 is unreleased and the published 1.16.0 gem is incompatible;
     # xeno is built against this exact commit. Drop the pin at RubyLLM v2 GA.
-    gem "ruby_llm", github: "crmne/ruby_llm", ref: "2aaddf96"
+    gem "ruby_llm", github: "crmne/ruby_llm", ref: "be80b6f1"
     # Loads .env at boot. Remove if you manage secrets another way.
     gem "dotenv"
     gem "puma"

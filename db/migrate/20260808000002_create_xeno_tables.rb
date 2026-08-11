@@ -13,6 +13,8 @@ class CreateXenoTables < ActiveRecord::Migration[8.1]
       t.text :thinking_text
       t.text :thinking_signature
       t.json :citations
+      t.json :server_tool_calls
+      t.json :raw_content
       t.string :finish_reason
       t.references :chat, null: false, foreign_key: { to_table: :xeno_chats }
       t.timestamps

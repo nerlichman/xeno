@@ -4,7 +4,8 @@ module Xeno
   # Drives one turn to completion (or to a park). This is the durable core:
   # RubyLLM's decomposed v2 loop (`generate` + self-executed tools +
   # `add_message` injection), checkpointed in the database at every move.
-  # We never call `run_tools` (not idempotent) or `complete` (unbounded).
+  # We never call `run_tools` (no approval gate, no per-call action
+  # checkpoint) or `complete` (a turn must bound its model calls).
   #
   # Crash-safety invariants:
   # - The user message and instructions were persisted when the turn was

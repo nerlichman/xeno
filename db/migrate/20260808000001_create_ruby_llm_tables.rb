@@ -41,6 +41,7 @@ class CreateRubyLlmTables < ActiveRecord::Migration[8.1]
       t.string :tool_call_id, null: false
       t.string :name, null: false
       t.text :thought_signature
+      t.string :approval
       t.json :arguments, default: {}
       t.timestamps
 

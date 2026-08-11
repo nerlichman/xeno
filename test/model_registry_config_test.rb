@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-# ruby_llm 2aaddf96 owns the model registry: including ActsAs (which
+# ruby_llm v2 owns the model registry: including ActsAs (which
 # Xeno::Chat does) auto-wires model_registry_store to the library's own
 # record class — the engine no longer configures anything. These assert the
 # same behavior the old xeno.model_registry initializer existed for:
