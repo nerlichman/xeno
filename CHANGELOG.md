@@ -2,46 +2,54 @@
 
 Format follows [Keep a Changelog](https://keepachangelog.com); versions follow
 [SemVer](https://semver.org). **xeno is on the `0.0.x` preview line: any release may
-change anything.** `0.1.0` will mark the first release we consider usable in anger —
+change anything.** `0.1.0` will mark the first release we consider usable in anger:
 after RubyLLM v2 GA is absorbed and the API has held still through early-adopter
 feedback.
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-08-13
+
+**Upgrading from 0.0.1 requires a fresh database.** The migrations were squashed
+and the old stamps no longer exist, so there is no migration path forward: the
+`0.0.x` preview line reserves exactly this.
+
+### Added
+
+- Interop with RubyLLM's tool approvals. A tool that declares `requires_approval`
+  and no xeno `approval` policy parks for approval instead of executing ungated;
+  an explicit policy, including `:never`, still wins. Approve and deny decisions
+  also land on the standard `ruby_llm_tool_calls.approval` column, so tooling
+  built against RubyLLM's convention reads xeno sessions natively.
 - Tools that declare a `tool_call:` keyword on `execute` receive the
   `RubyLLM::ToolCall` they were invoked by, so a tool body can read its own
   call id for logging or correlation. Tools without the keyword are called
   exactly as before.
-- Approval decisions mirror onto the standard `ruby_llm_tool_calls.approval`
-  column, so RubyLLM-aware tooling reads them natively. The action row stays
-  authoritative; questions are not mirrored.
-- A tool that declares RubyLLM's `requires_approval` and no xeno `approval` policy
-  now parks for approval instead of executing ungated. An explicit xeno policy,
-  including `:never`, still wins.
-- The `ruby_llm` pin moved from `2aaddf96` to `be80b6f1` (145 commits of upstream v2
-  development). No xeno API usage changed; the bundle swaps `ruby_llm-schema` for
-  `schematist`. The scaffold Gemfile and README point at the new ref.
-- The transcript tables mirror upstream's current install template: tool calls gain
-  an `approval` column, messages gain `server_tool_calls` and `raw_content`. All
-  three are read behind column guards, so existing behavior is unchanged; they exist
-  so the schema matches what the pinned ruby_llm can persist. The columns were added
-  to the unreleased migrations in place — **if you migrated a checkout of `main`
-  before this change, recreate the database** (or add the three columns by hand);
-  no released version is affected.
-- Removing an agent's instructions now takes effect at the next turn, the same way
-  editing them always has: staging clears the persisted system message when nothing
-  resolves, instead of silently keeping the stale one.
+
+### Changed
+
+- The `ruby_llm` pin moved from `2aaddf96` to `be80b6f1` (145 commits of upstream
+  v2 development). No xeno API usage changed; the bundle swaps `ruby_llm-schema`
+  for `schematist`. The scaffold Gemfile and README point at the new ref.
 - The engine's eight migrations are now two: `create_ruby_llm_tables` and
-  `create_xeno_tables`. The old set replayed pre-release history — creating tables
-  only to drop them again — through a database no install has ever had. Same final
-  schema, none of the churn. Each `ruby_llm_*` table is skipped if the database
+  `create_xeno_tables`. The old set replayed pre-release history, creating tables
+  only to drop them again, through a database no install has ever had. The new
+  pair produces the same final schema without the churn, and each
+  `ruby_llm_*` table is skipped when the database
   already has it, so a host app that ran ruby_llm's own installer keeps what it
   owns.
-- **Upgrading a database created by 0.0.1 requires a fresh database.** The old
-  migration stamps no longer exist, so there is no path forward from them — as the
-  `0.0.x` line allows.
-- The `Gemfile` no longer prefers a local ruby_llm checkout when one happens to sit
-  next door. Development bundles the same pinned ref as everyone else.
+- The transcript tables match upstream's current install template: tool calls
+  carry `approval`, messages carry `server_tool_calls` and `raw_content`. All
+  three are read behind column guards, so behavior is unchanged until the pinned
+  ruby_llm persists them.
+- The `Gemfile` no longer prefers a local ruby_llm checkout when one happens to
+  sit next door. Development bundles the same pinned ref as everyone else.
+
+### Fixed
+
+- Removing an agent's instructions now takes effect at the next turn, the same
+  way editing them always has: staging clears the persisted system message when
+  nothing resolves, instead of silently keeping the stale one.
 
 ## [0.0.1] - 2026-08-07
 
@@ -63,7 +71,7 @@ The first public release of xeno, a framework for durable AI agents built on Rai
   post-then-edit streaming).
 - Markdown cron schedules compiled to Solid Queue recurring entries, with dedup.
 - Generators (`xeno:install`, `xeno:tool`) and standalone mode: `xeno new my-agent` /
-  `xeno server` — one process, sqlite, zero services. Scaffolds include a pinned
+  `xeno server` for one process, sqlite, zero services. Scaffolds include a pinned
   `ruby_llm` Gemfile, dotenv, and an AGENTS.md pointing coding agents at the gem docs.
 - Standalone first boot refreshes the model registry after the boot migrations, so
   current model ids resolve without a manual `RubyLLM.models.refresh!`.
