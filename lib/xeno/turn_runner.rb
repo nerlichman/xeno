@@ -307,7 +307,7 @@ module Xeno
               result = ActiveSupport::Notifications.instrument("xeno.action", turn_id: turn.id, tool: call.name) do
                 tool = tool_class.new
                 tool.session = session
-                with_heartbeat { tool.call(arguments) }
+                with_heartbeat { tool.call(arguments, tool_call: call) }
               end
               stringify_result(result)
             rescue StandardError => e

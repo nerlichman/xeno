@@ -50,12 +50,6 @@ module Xeno
       end
     end
 
-    # RubyLLM derives the wire name from the full class name, which would
-    # leak the namespace (xeno/tools/get_weather). Use the path-derived name.
-    def name
-      self.class.tool_name
-    end
-
     # The session this call is running in — set by the runner before
     # `call`. nil when the tool is exercised outside a session (unit tests
     # calling `Tool.new.call` directly).

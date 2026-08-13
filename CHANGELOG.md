@@ -8,6 +8,10 @@ feedback.
 
 ## [Unreleased]
 
+- Tools that declare a `tool_call:` keyword on `execute` receive the
+  `RubyLLM::ToolCall` they were invoked by, so a tool body can read its own
+  call id for logging or correlation. Tools without the keyword are called
+  exactly as before.
 - Approval decisions mirror onto the standard `ruby_llm_tool_calls.approval`
   column, so RubyLLM-aware tooling reads them natively. The action row stays
   authoritative; questions are not mirrored.

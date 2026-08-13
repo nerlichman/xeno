@@ -29,6 +29,15 @@ class TurnRunnerTest < ActiveSupport::TestCase
     end
   end
 
+  class CallAware < Xeno::Tool
+    description "Echoes the id of the tool call that invoked it."
+    parameter :text, description: "Text"
+
+    def execute(text:, tool_call: nil)
+      { text: text, call_id: tool_call&.id }
+    end
+  end
+
   setup do
     CountedCharge.executions = 0
   end
@@ -87,6 +96,24 @@ class TurnRunnerTest < ActiveSupport::TestCase
     # The fake saw the tool schema and got the result linked correctly.
     resume = fake.requests.last
     assert_equal "call_rt_echo", resume["messages"].last["tool_call_id"]
+  end
+
+  test "a tool declaring the tool_call keyword receives its own call" do
+    start_fake_llm do |body|
+      if FakeLLM.tool_result?(body)
+        FakeLLM.text("done")
+      else
+        FakeLLM.tool_call("call_aware", { text: "yo" }, id: "call_rt_aware")
+      end
+    end
+    definition = TestDefinition.new(tools: { "call_aware" => CallAware })
+    session, turn = start_session(definition)
+
+    assert_equal :completed, Xeno::TurnRunner.new(turn, definition: definition).run
+
+    action = turn.actions.sole
+    assert_equal "completed", action.status
+    assert_includes action.output["content"], "call_rt_aware"
   end
 
   test "recorded tool calls are never re-executed after a mid-turn failure" do
