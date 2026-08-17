@@ -4,11 +4,10 @@ module Xeno
   class Engine < ::Rails::Engine
     isolate_namespace Xeno
 
-    # agent/ is a Zeitwerk root namespaced under Xeno with per-slot
-    # submodules: agent/tools/get_weather.rb defines Xeno::Tools::GetWeather.
-    # Non-constant files are xeno's to load: agent.rb is a config DSL,
-    # schedules/ holds markdown, channels/ is a DSL slot in v0.1, lib/ is
-    # plain shared Ruby (required manually by the author).
+    # agent/ is a Zeitwerk root namespaced under Xeno with per-slot submodules:
+    # agent/tools/get_weather.rb defines Xeno::Tools::GetWeather. Non-constant files are xeno's to
+    # load: agent.rb is a config DSL, schedules/ holds markdown, channels/ is a DSL slot, lib/ is
+    # plain shared Ruby required by the author.
     initializer "xeno.agent_autoload", before: :setup_main_autoloader do |app|
       agent_root = Xeno.agent_root
       if agent_root&.directory?
@@ -22,8 +21,8 @@ module Xeno
       end
     end
 
-    # The cached definition holds tool classes; drop it whenever the app
-    # reloads so dev picks up edits under agent/.
+    # The cached definition holds tool classes; drop it whenever the app reloads so dev picks up
+    # edits under agent/.
     config.to_prepare do
       Xeno.reset_definition!
     end

@@ -5,13 +5,10 @@ require "net/http"
 
 module Xeno
   module Channels
-    # The Slack channel: Events API webhook with constant-time signature
-    # verification, thread-scoped sessions (continuation token =
-    # "slack:<channel>:<thread_ts>"), replies posted at turn completion,
-    # and plain-text approvals ("approve"/"deny"/an answer) in the thread.
-    #
-    # v0.1 scope: mentions and DMs start sessions; thread replies continue
-    # them. Post-then-edit streaming and Block Kit buttons are v0.2.
+    # The Slack channel: Events API webhook with constant-time signature verification, thread-scoped
+    # sessions (continuation token = "slack:<channel>:<thread_ts>"), and plain-text approvals in the
+    # thread. Mentions and DMs start sessions; thread replies continue them. Post-then-edit
+    # streaming is opt-in (stream_replies); Block Kit buttons are not implemented.
     class Slack
       SIGNATURE_VERSION = "v0".freeze
       TIMESTAMP_TOLERANCE = 300 # seconds; replayed webhooks are rejected
@@ -42,9 +39,9 @@ module Xeno
         @api_base
       end
 
-      # Opt-in post-then-edit streaming: the reply posts on the first model
-      # delta and is edited (~1s cadence, rate-limit aware) until the final
-      # text lands. Off by default — replies post once at completion.
+      # Opt-in post-then-edit streaming: the reply posts on the first model delta and is edited (~1s
+      # cadence, rate-limit aware) until the final text lands. Off by default — replies post once at
+      # completion.
       def stream_replies(value = nil)
         @stream_replies = value unless value.nil?
         @stream_replies
@@ -84,8 +81,8 @@ module Xeno
         post_message(channel: channel_id, thread_ts: thread_ts, text: content.to_s)
       end
 
-      # One per content-bearing model reply when stream_replies is on: the
-      # runner pushes deltas, we post-then-edit in the thread.
+      # One per content-bearing model reply when stream_replies is on: the runner pushes deltas, we
+      # post-then-edit in the thread.
       def streamer_for(session)
         return nil unless stream_replies
 
@@ -121,12 +118,10 @@ module Xeno
         end
       end
 
-      # Post-then-edit delivery for ONE streaming model reply. The first
-      # content delta posts the thread message; later deltas edit it at most
-      # once per EDIT_INTERVAL; finish writes the durable final text. Rate
-      # limits defer the next edit (Retry-After); any hard failure turns
-      # streaming off for this reply — the completion post is the fallback,
-      # and the durable truth is rows either way.
+      # Post-then-edit delivery for one streaming reply: the first content delta posts the thread
+      # message, later deltas edit it at most once per EDIT_INTERVAL, finish writes the final text.
+      # Rate limits defer the next edit; a hard failure turns streaming off for this reply and the
+      # completion post is the fallback.
       class Streamer
         EDIT_INTERVAL = 1.0 # seconds — comfortably under chat.update's tier
 
@@ -149,8 +144,8 @@ module Xeno
           @ts.nil? ? start_message : edit_message(@buffer.dup)
         end
 
-        # Returns true when this streamer delivered the reply (the runner
-        # then skips the completion post); false hands delivery back.
+        # Returns true when this streamer delivered the reply (the runner then skips the completion
+        # post); false hands delivery back.
         def finish(final_text)
           return false if @ts.nil?
 
@@ -198,8 +193,8 @@ module Xeno
         end
       end
 
-      # One JSON POST to the Slack Web API; 429 becomes RateLimited (with
-      # Retry-After), any other failure raises Xeno::Error.
+      # One JSON POST to the Slack Web API; 429 becomes RateLimited (with Retry-After), any other
+      # failure raises Xeno::Error.
       def api_post(method, payload)
         uri = URI("#{api_base}/#{method}")
         request = Net::HTTP::Post.new(uri)
@@ -244,14 +239,13 @@ module Xeno
         end
       end
 
-      # A reply into a waiting thread resolves the FIRST pending input; an
-      # unrelated reply is HELD as the next message (never auto-deny, never
-      # a forced answer):
+      # A reply into a waiting thread resolves the first pending input;
+      # an unrelated reply is held as the next message — never an
+      # auto-deny, never a forced answer.
       # - approvals: approve/deny words resolve; anything else holds.
-      # - questions with choices: match by 1-based index ("2"), by label
-      #   (case-insensitive), or by exact option text; no match holds and
-      #   the question stays pending.
-      # - free-form questions (no choices): any text is the answer.
+      # - questions with choices: match by 1-based index, label, or exact
+      #   option text; no match holds.
+      # - free-form questions: any text is the answer.
       def continue_session(session, text, principal)
         pending = Action.joins(:turn)
                         .where(xeno_turns: { session_id: session.id }, status: "pending_approval")

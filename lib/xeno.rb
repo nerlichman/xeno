@@ -23,8 +23,8 @@ require "xeno/engine"
 
 module Xeno
   class << self
-    # The app's agent directory. Defaults to <Rails.root>/agent; overridable
-    # (standalone mode, tests).
+    # The app's agent directory. Defaults to <Rails.root>/agent; overridable (standalone mode,
+    # tests).
     attr_writer :agent_root
 
     def agent_root
@@ -52,15 +52,15 @@ module Xeno
       @captured_agent_config
     end
 
-    # The agent/instructions.rb entry point — dynamic instructions resolved
-    # at turn-stage time with the session context:
+    # The agent/instructions.rb entry point — dynamic instructions resolved at turn-stage time with
+    # the session context:
     #
     #   Xeno.instructions do |context|
     #     "You are helping #{context.principal&.dig("name") || "a guest"}."
     #   end
     #
-    # Composes with the static instructions.md: static first, the block's
-    # return appended. The block runs on EVERY turn stage — keep it fast.
+    # Composes with the static instructions.md: static first, the block's return appended. The block
+    # runs on EVERY turn stage — keep it fast.
     def instructions(&block)
       @captured_instructions = block
     end
@@ -74,15 +74,15 @@ module Xeno
       @captured_instructions
     end
 
-    # The agent/hooks/*.rb entry point — observe-only handlers for stream
-    # events (any type from the vocabulary, or "*"):
+    # The agent/hooks/*.rb entry point — observe-only handlers for stream events (any type from the
+    # vocabulary, or "*"):
     #
     #   Xeno.hook "turn.completed" do |event|
     #     Metrics.increment("agent.turns")
     #   end
     #
-    # Handlers fire after the event commits, at-least-once (replays
-    # re-emit). Raising never breaks the runtime.
+    # Handlers fire after the event commits, at-least-once (replays re-emit). Raising never breaks
+    # the runtime.
     def hook(event_type, &block)
       raise ArgumentError, "Xeno.hook requires a block" unless block
 
@@ -96,8 +96,8 @@ module Xeno
       @captured_hooks
     end
 
-    # The resolved agent definition, discovered on first use and cached.
-    # Rails reloading resets it (see engine's to_prepare).
+    # The resolved agent definition, discovered on first use and cached. Rails reloading resets it
+    # (see engine's to_prepare).
     def definition
       @definition ||= AgentDefinition.load(agent_root, name: default_agent_name)
     end
@@ -110,8 +110,8 @@ module Xeno
       Rails.application.class.module_parent_name.underscore
     end
 
-    # Dev routes exist in development, or when XENO_DEV_ROUTES is exactly
-    # "1"/"true" (a truthy-check would let "0" enable them — S5).
+    # Dev routes exist in development, or when XENO_DEV_ROUTES is exactly "1"/"true" (a truthy-check
+    # would let "0" enable them).
     def dev_routes_enabled?
       Rails.env.development? || %w[1 true].include?(ENV["XENO_DEV_ROUTES"].to_s)
     end

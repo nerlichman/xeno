@@ -1,17 +1,14 @@
 # frozen_string_literal: true
 
 module Xeno
-  # Models send JSON-typed arguments loosely — the first field run had
-  # llama sending "4200" (String) for an integer-typed parameter, which
-  # flowed into execute unchecked. Casts each argument per the tool's
-  # declared parameter type; anything uncoercible becomes a validation
-  # error the runner turns into an error tool result (the model retries
-  # with fixed arguments) — never an exception into execute.
+  # Casts each tool argument to its declared parameter type. Models send JSON-typed arguments
+  # loosely ("4200" for an integer parameter); an uncoercible value becomes a validation error the
+  # runner turns into an error tool result for the model to retry — never an exception into execute.
   module Arguments # :nodoc:
     module_function
 
-    # Returns [coerced_arguments, errors]. Undeclared keys pass through
-    # untouched (schema-based tools declare nothing here).
+    # Returns [coerced_arguments, errors]. Undeclared keys pass through untouched (schema-based
+    # tools declare nothing here).
     def coerce(tool_class, arguments)
       declared = tool_class.respond_to?(:declared_parameters) ? tool_class.declared_parameters : {}
       return [ arguments, [] ] if declared.empty? || !arguments.is_a?(Hash)

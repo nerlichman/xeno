@@ -4,12 +4,10 @@ module Xeno
   module Standalone
     module_function
 
-    # First boot only (the registry table is empty): pull the live model
-    # catalog from the configured providers so current model ids resolve
-    # without a manual RubyLLM.models.refresh!. Loading the definition first
-    # runs agent.rb's RubyLLM.configure — the refresh needs those provider
-    # keys. Never fatal, never repeated once the table has rows; skippable
-    # with XENO_SKIP_MODEL_REFRESH=1 (deterministic scripts, offline boots).
+    # First boot only (the registry table is empty): pulls the live model catalog so current model
+    # ids resolve without a manual refresh. The definition loads first because agent.rb's
+    # RubyLLM.configure sets the provider keys. Never fatal, never repeated once the table has rows;
+    # XENO_SKIP_MODEL_REFRESH=1 skips it.
     def refresh_models!
       return if ENV["XENO_SKIP_MODEL_REFRESH"]
 

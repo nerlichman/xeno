@@ -9,16 +9,11 @@ module Xeno
   #
   #   Xeno.hook "*" do |event| ... end   # every event
   #
-  # Semantics:
-  # - Handlers fire AFTER the event row is durably committed (after_commit),
-  #   typed handlers first, then the wildcard. The block receives the
-  #   Xeno::Event record (event_type, data, index, session).
-  # - Observe-only: return values are ignored; hooks cannot veto anything
-  #   or inject model context. A raising handler is logged and skipped — a
-  #   hook can never break the runtime or fail the turn.
-  # - AT-LEAST-ONCE: replayed steps re-emit new events with new indexes.
-  #   Key once-per-step side effects on (turn_id, step) from the data; key
-  #   stored content on (session_id, index).
+  # Handlers fire after the event row commits, typed handlers before the wildcard, with the
+  # Xeno::Event record as the argument. Return values are ignored and a raising handler is logged
+  # and skipped — a hook can never veto, inject context, or fail the turn. Delivery is
+  # at-least-once: replayed steps re-emit events, so key side effects on (turn_id, step) and stored
+  # content on (session_id, index).
   module Hooks
     module_function
 

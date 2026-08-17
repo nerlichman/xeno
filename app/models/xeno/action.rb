@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
 module Xeno
-  # One requested tool call: the durability checkpoint and (in M4) the
-  # approval state. A completed action means "executed AND its result is in
-  # the transcript" — the two are committed in one transaction, so replay
-  # logic can trust either signal.
+  # One requested tool call: the durability checkpoint and the approval state. A completed action
+  # means executed and its result is in the transcript — committed in one transaction, so replay can
+  # trust either signal.
   class Action < ApplicationRecord
     enum :status, %w[pending pending_approval approved denied completed failed].index_with(&:itself), validate: true
     enum :kind, %w[tool question].index_with(&:itself), prefix: true, validate: true

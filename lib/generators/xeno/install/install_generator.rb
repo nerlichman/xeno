@@ -2,8 +2,7 @@
 
 module Xeno
   module Generators
-    # Mounted-mode install: initializer, engine mount, migrations, and the
-    # agent/ scaffold.
+    # Mounted-mode install: initializer, engine mount, migrations, and the agent/ scaffold.
     class InstallGenerator < Rails::Generators::Base
       source_root File.expand_path("templates", __dir__)
 

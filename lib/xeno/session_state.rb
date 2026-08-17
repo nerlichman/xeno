@@ -1,13 +1,10 @@
 # frozen_string_literal: true
 
 module Xeno
-  # The per-session KV store: working state for
-  # ONE conversation. JSON-typed — values round-trip through JSON, so
-  # symbols become strings and anything unserializable is rejected up
-  # front. Reads always hit the database (a tool in a fresh worker sees
-  # what the last worker wrote); writes take the session row lock, so
-  # read-modify-write merges never lose entries. Cleared by `reset`; it is
-  # NOT long-term memory — durable knowledge belongs in your own models.
+  # The per-session KV store: working state for one conversation, not long-term memory. Values
+  # round-trip through JSON (symbols become strings; unserializable values are rejected up front).
+  # Reads always hit the database, and writes take the session row lock so read-modify-write merges
+  # never lose entries. Cleared by `reset`.
   class SessionState
     def initialize(session)
       @session = session
@@ -22,8 +19,8 @@ module Xeno
       current
     end
 
-    # Merges the entries in one locked write. Keys stringify; values must
-    # be JSON-serializable (Xeno::Error otherwise).
+    # Merges the entries in one locked write. Keys stringify; values must be JSON-serializable
+    # (Xeno::Error otherwise).
     def update(entries)
       normalized = normalize(entries)
       @session.with_lock do

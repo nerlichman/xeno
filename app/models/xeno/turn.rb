@@ -1,16 +1,15 @@
 # frozen_string_literal: true
 
 module Xeno
-  # One user message and all work until the agent responds. Runs as one
-  # ActiveJob. Correctness lives here, in the database, not in the queue:
+  # One user message and all work until the agent responds, run as one ActiveJob. Correctness lives
+  # in these rows, not in the queue:
   #
-  # 1. Atomic claim (CAS on claim_token) — one worker owns the turn.
-  # 2. Heartbeat — the owner touches heartbeat_at at step boundaries; a
-  #    stale heartbeat lets the next attempt reclaim (checkpoint replay
-  #    makes takeover safe).
-  # 3. Fencing token — every write is conditioned on claim_token = mine, so
-  #    a zombie that wakes up after being reaped affects zero rows.
-  # 4. Max attempts — poison turns become turn.failed, not infinite retries.
+  # 1. Atomic claim (CAS on claim_token): one worker owns the turn.
+  # 2. Heartbeat: a stale heartbeat lets the next attempt reclaim;
+  #    checkpoint replay makes takeover safe.
+  # 3. Fencing token: every write is conditioned on claim_token = mine,
+  #    so a reaped zombie affects zero rows.
+  # 4. Max attempts: poison turns fail instead of retrying forever.
   class Turn < ApplicationRecord
     enum :status, %w[pending running waiting completed failed cancelled].index_with(&:itself), validate: true
     enum :kind, %w[message compaction].index_with(&:itself), prefix: true, validate: true
@@ -20,11 +19,9 @@ module Xeno
 
     scope :active, -> { where(status: %w[pending running waiting]) }
 
-    # Appends the next turn to the session, sequence assigned race-safely.
-    # The INSERT runs in its own savepoint (requires_new): stage_turn! calls
-    # this inside a transaction, and on Postgres a failed INSERT otherwise
-    # aborts the whole transaction — the retry would raise
-    # PG::InFailedSqlTransaction instead of recovering.
+    # Appends the next turn with a race-safely assigned sequence. The INSERT runs in its own
+    # savepoint because stage_turn! calls this inside a transaction, and on Postgres a failed INSERT
+    # would otherwise abort the whole transaction.
     def self.append!(session, user_message:, transcript_deferred: false, kind: "message")
       attempts = 0
       begin
@@ -44,15 +41,13 @@ module Xeno
       TurnJob.perform_later(id)
     end
 
-    # The atomic claim. Returns the fencing token on success, nil when
-    # another worker owns the turn (exit quietly) or it isn't claimable.
-    # Claimable: pending, or running with a stale heartbeat (dead owner).
-    # Poison turns are failed here instead of retrying forever.
+    # The atomic claim. Returns the fencing token, or nil when another worker owns the turn or it
+    # isn't claimable. Claimable: pending, or running with a stale heartbeat. Poison turns fail here
+    # instead of retrying forever.
     #
-    # `attempts` counts FAILURES, not claims: a stale-running reclaim is
-    # crash evidence and counts here; a transient error counts in
-    # release_for_retry!; an approval/question resume counts in `resumes`
-    # and never against the poison ladder (H2).
+    # `attempts` counts failures, not claims: a stale-running reclaim is crash evidence and counts;
+    # a transient error counts in release_for_retry!; an approval or question resume counts in
+    # `resumes`, never against the poison ladder.
     def claim!
       current = self.class.find(id)
 
@@ -61,8 +56,8 @@ module Xeno
                        .where.not(status: %w[completed failed cancelled])
                        .update_all(status: "failed", error: { "message" => "max attempts (#{current.attempts}) exhausted" })
         if poisoned == 1
-          # A poisoned TURN leaves the SESSION running (idle, can take the
-          # next message); settle any dangling tool calls so it stays usable.
+          # A poisoned TURN leaves the SESSION running (idle, can take the next message); settle any
+          # dangling tool calls so it stays usable.
           session.settle_unanswered_tool_calls!(self, reason: "turn failed (max attempts exhausted)")
           session.emit("turn.failed", { turn_id: id, error: "max attempts exhausted" })
         end
@@ -89,9 +84,8 @@ module Xeno
       claimed == 1 ? current.claim_token + 1 : nil
     end
 
-    # Transient failure: record the error, count the failure against the
-    # poison ladder, and hand the claim back (status pending) so the queue
-    # retry can claim immediately.
+    # Transient failure: record the error, count the failure against the poison ladder, and hand the
+    # claim back (status pending) so the queue retry can claim immediately.
     def release_for_retry!(token, error)
       current = self.class.find(id)
       fenced_update!(token,
@@ -100,8 +94,8 @@ module Xeno
         error: { "class" => error.class.name, "message" => error.message })
     end
 
-    # Fenced write: touches the heartbeat iff we still own the claim.
-    # Raises Xeno::Fenced when a zombie discovers it was reaped.
+    # Fenced write: touches the heartbeat iff we still own the claim. Raises Xeno::Fenced when a
+    # zombie discovers it was reaped.
     def heartbeat!(token)
       fenced_update!(token, heartbeat_at: Time.current)
     end

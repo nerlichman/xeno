@@ -1,16 +1,12 @@
 # frozen_string_literal: true
 
 module Xeno
-  # Fires one scheduled run: a fire-and-forget task-mode session under the
-  # app principal. Solid Queue recurring entries (rake xeno:schedules:sync)
-  # and the dev dispatch endpoint both enqueue this.
+  # Fires one scheduled run: a fire-and-forget task-mode session under the app principal, enqueued
+  # by Solid Queue recurring entries or the dev dispatch endpoint.
   #
-  # At-least-once safe: queues redeliver, and Solid Queue's recurring
-  # (task, run-at) dedup only covers the enqueue, not the execution. Each
-  # enqueue carries one ActiveJob job_id; the dedup row claims it in the
-  # SAME transaction that opens the session, so a redelivered tick can
-  # never double-open — it re-enqueues the recorded turn instead (idle
-  # no-op if the first delivery finished: the claim CAS decides).
+  # At-least-once safe: queues redeliver, and recurring dedup covers only the enqueue. The dedup row
+  # claims this job_id in the same transaction that opens the session, so a redelivered tick can
+  # never double-open — it re-enqueues the recorded turn instead.
   class ScheduleJob < ApplicationJob # :nodoc:
     queue_as :default
 
@@ -45,9 +41,8 @@ module Xeno
 
     private
 
-    # This job_id already ran (or died mid-run): pick up ITS turn instead of
-    # opening a second session. The claim CAS makes this a no-op when the
-    # first delivery actually finished.
+    # This job_id already ran (or died mid-run): pick up ITS turn instead of opening a second
+    # session. The claim CAS makes this a no-op when the first delivery actually finished.
     def redelivered_turn(claimed)
       return nil if claimed
 

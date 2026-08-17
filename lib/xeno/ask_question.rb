@@ -1,11 +1,9 @@
 # frozen_string_literal: true
 
 module Xeno
-  # The one framework tool in v0.1. It has no executable body: the model
-  # calling it parks the turn with an input.requested event, and a human's
-  # answer is injected as the tool result on resume — the same mechanics as
-  # approvals. Registered on every chat (outside the Xeno::Tools namespace,
-  # which belongs to the app's agent/tools/).
+  # The built-in question tool. It has no executable body: the model calling it parks the turn, and
+  # a human's answer is injected as the tool result on resume — the same mechanics as approvals.
+  # Registered on every chat, outside the Xeno::Tools namespace that belongs to the app.
   class AskQuestion < Tool
     description "Ask the human a question and wait for their answer. " \
                 "Use when you need information or a decision only they can provide."

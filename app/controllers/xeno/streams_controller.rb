@@ -1,15 +1,12 @@
 # frozen_string_literal: true
 
 module Xeno
-  # The session event stream: SSE by default, NDJSON on request
-  # (`?format=ndjson` or `Accept: application/x-ndjson` — one envelope per
-  # line, friendlier to curl/jq and non-browser consumers). `?start_index=N`
-  # rewinds/resumes — events are durable rows, so reconnecting clients
-  # replay history and then follow live. The stream ends when the session
-  # reaches a terminal status (or the optional configured max duration).
+  # The session event stream: SSE by default, NDJSON on request (`?format=ndjson` or `Accept:
+  # application/x-ndjson`). `?start_index=N` rewinds — events are durable rows, so clients replay
+  # history and then follow live. The stream ends at a terminal session status or the configured max
+  # duration.
   #
-  # Known limitation (documented): ActionController::Live holds a thread
-  # per connected client.
+  # Known limitation: ActionController::Live holds a thread per client.
   class StreamsController < ApiController # :nodoc:
     include ActionController::Live
 
@@ -28,8 +25,8 @@ module Xeno
       def close = @sse.close
     end
 
-    # NDJSON framing: one envelope per line (type/index live inside the
-    # envelope); a bare newline as keepalive — line parsers skip empties.
+    # NDJSON framing: one envelope per line (type/index live inside the envelope); a bare newline as
+    # keepalive — line parsers skip empties.
     class NdjsonWriter
       def initialize(stream)
         @stream = stream
@@ -60,21 +57,19 @@ module Xeno
         end
         last_write = Process.clock_gettime(Process::CLOCK_MONOTONIC) if events.any?
 
-        # A full batch means more history is waiting — keep paging through
-        # the catch-up without sleeping or ending on a terminal status.
+        # A full batch means more history is waiting — keep paging through the catch-up without
+        # sleeping or ending on a terminal status.
         next if events.size == batch_limit
 
         break unless session.reload.active?
         break if stream_expired?(started)
-        # A graceful stop must not wait out the in-flight-request window —
-        # the stream is resumable by design (events are durable rows, the
-        # client reconnects with its cursor), so close it and let the
-        # server exit. The 5s force cap in the puma config stays as the
+        # A graceful stop must not wait out the in-flight-request window. The stream is resumable by
+        # design, so close it and let the server exit; the 5s force cap in the puma config is the
         # backstop.
         break if server_shutting_down?
 
-        # A quiet stream never writes, so a dead client would never raise and
-        # this thread would poll forever — keepalives make disconnects visible.
+        # A quiet stream never writes, so a dead client would never raise and this thread would poll
+        # forever — keepalives make disconnects visible.
         if Process.clock_gettime(Process::CLOCK_MONOTONIC) - last_write > KEEPALIVE_INTERVAL
           writer.keepalive
           last_write = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -112,9 +107,8 @@ module Xeno
       false
     end
 
-    # ActionController::Live runs the action on its OWN thread, so Puma's
-    # thread-local Server.current is nil here (verified against a live
-    # server). Find the process's server instance once per connection.
+    # ActionController::Live runs the action on its own thread, so Puma's thread-local
+    # Server.current is nil here. Find the process's server instance once per connection.
     def puma_server
       return nil unless defined?(Puma::Server)
 

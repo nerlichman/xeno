@@ -1,12 +1,10 @@
 # frozen_string_literal: true
 
 module Xeno
-  # The append-only session stream — also the audit log. `index` is the
-  # per-session cursor; consumers dedupe
-  # re-emitted events by (session, index).
+  # The append-only session stream — also the audit log. `index` is the per-session cursor;
+  # consumers dedupe re-emitted events by (session, index).
   class Event < ApplicationRecord
-    # The fixed vocabulary (docs/runtime.md § Events). Hooks may subscribe
-    # to any of these or "*".
+    # The fixed vocabulary (docs/runtime.md § Events). Hooks may subscribe to any of these or "*".
     TYPES = %w[
       session.started turn.started message.received
       step.started step.completed step.failed
@@ -20,16 +18,14 @@ module Xeno
 
     belongs_to :session, class_name: "Xeno::Session"
 
-    # Hooks fire only after the row is durably committed (and therefore
-    # visible to other processes) — never inside the emitting transaction.
+    # Hooks fire only after the row is durably committed (and therefore visible to other processes)
+    # — never inside the emitting transaction.
     after_create_commit { Hooks.dispatch(self) }
 
-    # Appends with a race-safe per-session index: concurrent writers collide
-    # on the unique index and retry with the next slot. The INSERT runs in
-    # its own savepoint (requires_new): emit is routinely called inside
-    # enclosing transactions, and on Postgres a failed INSERT otherwise
-    # aborts the whole transaction — the retry would raise
-    # PG::InFailedSqlTransaction instead of recovering.
+    # Appends with a race-safe per-session index: concurrent writers collide on the unique index and
+    # retry with the next slot. The INSERT runs in its own savepoint because emit is routinely
+    # called inside enclosing transactions, and on Postgres a failed INSERT would otherwise abort
+    # the whole transaction.
     def self.append!(session, event_type, data = {})
       attempts = 0
       begin
@@ -44,11 +40,9 @@ module Xeno
           )
         end
       rescue ActiveRecord::RecordNotUnique
-        # Every collision means a competing append SUCCEEDED, so retries are
-        # bounded by actual contention. SQLite's file lock serializes writers
-        # (collisions are rare); Postgres runs them truly concurrently, so a
-        # burst can cost more than a handful of rounds — back off with jitter
-        # instead of giving up early.
+        # Every collision means a competing append succeeded, so retries are bounded by actual
+        # contention. SQLite's file lock serializes writers; Postgres runs them concurrently, so a
+        # burst can cost several rounds — back off with jitter instead of giving up early.
         attempts += 1
         raise if attempts >= 50
 

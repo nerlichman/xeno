@@ -1,15 +1,18 @@
 # frozen_string_literal: true
 
-# Standalone mode: Rails as an implementation detail. A scaffolded app is
-# a handful of visible files (agent/, Gemfile, config.ru, .gitignore); the
-# entire Rails::Application lives HERE, inside the gem.
+# = Standalone mode
+#
+# An agent shouldn't need a whole Rails app of its own. `xeno new my-agent` scaffolds a directory
+# with a handful of visible files — agent/, a Gemfile, config.ru, .gitignore — and the entire
+# Rails::Application lives here, inside the gem:
 #
 #   # config.ru
 #   require "xeno/standalone"
 #   run Xeno.rails_app
 #
-# SQLite + Solid Queue inside Puma (`xeno server`) make it one process with
-# zero external services; migrations run at boot.
+# `xeno server` boots it as one process with zero external services: SQLite for storage, Solid
+# Queue inside Puma for jobs, migrations applied at boot. When the agent outgrows this, mount the
+# engine in a full Rails app and bring the agent/ directory along unchanged.
 require "rails"
 require "active_model/railtie"
 require "active_record/railtie"
@@ -17,8 +20,8 @@ require "active_job/railtie"
 require "action_controller/railtie"
 require "action_view/railtie"
 
-# A config.ru-only app has no Bundler.require(*Rails.groups); pull in what
-# the scaffolded Gemfile provides.
+# A config.ru-only app has no Bundler.require(*Rails.groups); pull in what the scaffolded Gemfile
+# provides.
 require "solid_queue"
 require "sqlite3"
 
@@ -53,9 +56,8 @@ module Xeno
             "adapter" => "sqlite3",
             "database" => ENV.fetch("XENO_DATABASE", "storage/xeno_#{Rails.env}.sqlite3"),
             "pool" => ENV.fetch("RAILS_MAX_THREADS", 10).to_i,
-            # Busy handler: web + Solid Queue's forked dispatcher/worker share this
-            # one file; without a timeout the sqlite3 adapter does NOT wait for
-            # locks ("default: no wait") and every collision raises
+            # Web and Solid Queue's forked processes share this one file; without a busy timeout the
+            # sqlite3 adapter does not wait for locks and every collision raises
             # SQLite3::BusyException. Same 5s default rails new generates.
             "timeout" => ENV.fetch("XENO_DATABASE_TIMEOUT", 5000).to_i
           }
@@ -69,9 +71,8 @@ module Xeno
   module Standalone # :nodoc:
     module_function
 
-    # Boot: initialize the app, then bring the database up to date — the
-    # engine's migrations plus Solid Queue's tables (loaded straight from
-    # the solid_queue gem's install template).
+    # Boot: initialize the app, then bring the database up to date — the engine's migrations plus
+    # Solid Queue's tables (loaded straight from the solid_queue gem's install template).
     def boot!
       ENV["RAILS_ENV"] ||= "development"
       FileUtils.mkdir_p(StandaloneApplication::APP_ROOT.join("storage"))
@@ -91,11 +92,9 @@ module Xeno
       Rails.application
     end
 
-    # Solid Queue's recurring machinery is how the reaper (always) and the
-    # compiled schedules (outside development) fire in standalone mode. The
-    # file lives under storage/ (gitignored) so the scaffold stays four
-    # visible files; the env var — read by Solid Queue's supervisor, which
-    # starts after config.ru has loaded — points the scheduler at it.
+    # Solid Queue's recurring machinery fires the reaper (always) and the compiled schedules
+    # (outside development) in standalone mode. The file lives under storage/ so the scaffold stays
+    # four visible files; the env var points Solid Queue's supervisor at it.
     def write_recurring_config!
       section = { Xeno::Schedules::REAPER_KEY => Xeno::Schedules.reaper_entry }
       unless Rails.env.development?
@@ -125,8 +124,8 @@ module Xeno
       File.join(spec.gem_dir, "lib", "generators", "solid_queue", "install", "templates", "db", "queue_schema.rb")
     end
 
-    # The gem-owned puma config used by `xeno server` — Solid Queue runs
-    # inside Puma (SOLID_QUEUE_IN_PUMA), one process total.
+    # The gem-owned puma config used by `xeno server` — Solid Queue runs inside Puma
+    # (SOLID_QUEUE_IN_PUMA), one process total.
     def puma_config_path
       File.expand_path("standalone/puma.rb", __dir__)
     end

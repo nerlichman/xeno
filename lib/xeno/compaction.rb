@@ -1,21 +1,11 @@
 # frozen_string_literal: true
 
 module Xeno
-  # Summarize-and-replace compaction, mixed into TurnRunner and executed as
-  # a claimed turn (kind: "compaction"). Riding the turn machinery buys the
-  # hard properties for free: the claim CAS makes it exclusive, session
-  # ordering queues it behind an active or parked turn, the heartbeat covers
-  # the summary model call, and a crash replays it (the applied result is
-  # recorded on the turn row, so replay never compacts twice).
+  # Summarize-and-replace compaction, run as a claimed turn (kind: "compaction") so it is exclusive,
+  # queues behind active work, and replays safely after a crash.
   #
-  # Shape: the system prompt survives untouched; the most recent
-  # `compaction_tail_turns` user-anchored turns survive verbatim (a tail cut
-  # at a user row can never separate an assistant's tool calls from their
-  # results); everything between is summarized by a throwaway model call
-  # (the active model, never persisted) and REPLACED — the summary is
-  # written into the earliest compacted row so both id- and created_at-
-  # ordering keep it in place, and the remaining rows are destroyed
-  # newest-first (results before the tool_calls they reference).
+  # The system prompt and the last `compaction_tail_turns` turns survive verbatim; everything before
+  # them is summarized by a throwaway model call and replaced in place.
   module Compaction # :nodoc:
     SUMMARY_PREFIX = "[Conversation summary — earlier messages were compacted]".freeze
 
@@ -52,8 +42,9 @@ module Xeno
       (turn.user_message || {}).key?("result")
     end
 
-    # Everything strictly before the tail is compactable. The tail starts at
-    # the Nth-from-last user row; with too few turns there is nothing to do.
+    # Everything strictly before the tail is compactable. The tail starts at the Nth-from-last user
+    # row — a cut at a user row never splits an assistant's tool calls from their results. With too
+    # few turns there is nothing to do.
     def compaction_plan(rows)
       system_rows, convo = rows.partition { |row| row.role == "system" }
       user_positions = convo.each_index.select { |i| convo[i].role == "user" }
@@ -67,9 +58,8 @@ module Xeno
       end
     end
 
-    # One model call on a throwaway chat — the active model with the agent's
-    # runtime options, no persistence, no tools. A previous summary (from an
-    # earlier compaction) is just an early row here and flows in whole.
+    # One model call on a throwaway chat: no persistence, no tools. An earlier compaction's summary
+    # is an ordinary early row here.
     def compaction_summary(rows)
       options = definition.config.model_options
       llm = RubyLLM.chat(
@@ -94,17 +84,16 @@ module Xeno
       }.join("\n\n")
     end
 
-    # The keeper (earliest compacted row) becomes the summary in place; the
-    # rest are destroyed newest-first. Rows, marker, and the
-    # compaction.completed event commit together — replay after any crash
-    # is a pure no-op past this transaction.
+    # The earliest compacted row becomes the summary in place; the rest are destroyed newest-first.
+    # Rows, marker, and event commit together, so replay after a crash is a no-op past this
+    # transaction.
     def apply_compaction!(plan, summary)
       keeper, *rest = plan[:compact]
 
       ActiveRecord::Base.transaction do
         rest.reverse_each(&:destroy!)
-        # A parent tool call on a surviving earlier row would otherwise
-        # dangle a result FK at the repurposed keeper.
+        # A parent tool call on a surviving earlier row would otherwise dangle a result FK at the
+        # repurposed keeper.
         keeper.ruby_llm_tool_calls.destroy_all
         keeper.ruby_llm_parent_tool_call&.update!(result: nil)
         keeper.update!(
@@ -125,10 +114,8 @@ module Xeno
       end
     end
 
-    # Between-turns trigger: after a message turn completes, stage a
-    # compaction turn when the last model call's context usage crossed the
-    # threshold share of the model's window (config fallback when the
-    # registry doesn't know the window).
+    # After a message turn completes, stage a compaction turn when the last model call crossed the
+    # threshold share of the model's window (config fallback when the registry doesn't know it).
     def maybe_stage_compaction
       threshold = Xeno.config.compaction_threshold
       return unless threshold
@@ -153,9 +140,7 @@ module Xeno
       window || Xeno.config.compaction_context_window
     end
 
-    # What the provider counted for the last completed call — the truthful
-    # "how full is the context" number, from the per-attempt usage ledger
-    # (message rows no longer carry token columns).
+    # The provider's count for the last completed call, read from the per-attempt usage ledger.
     def compaction_tokens_used
       last = @chat.ruby_llm_usages.where(operation: "chat", status: "succeeded")
                   .where.not(input_tokens: nil).order(:created_at, :id).last

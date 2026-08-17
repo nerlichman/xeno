@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
 module Xeno
-  # The Slack Events API endpoint. The generic auth lambda is skipped —
-  # Slack's own request signature IS the authentication (verified in
-  # constant time), and it fails closed: no configured slack channel = 404,
-  # bad or stale signature = 401.
+  # The Slack Events API endpoint. The generic auth lambda is skipped — Slack's own request
+  # signature IS the authentication (verified in constant time), and it fails closed: no configured
+  # slack channel = 404, bad or stale signature = 401.
   class SlackController < ApiController # :nodoc:
     skip_before_action :authenticate!
 
@@ -30,11 +29,9 @@ module Xeno
 
     private
 
-    # Fast ack (Slack retries anything that misses its 3s window) + retry
-    # dedup: the event_id claim and the job enqueue commit together, so a
-    # retry storm yields exactly one processing job — and a crash before
-    # the ack leaves the claim unclaimed for the retry to win. Events
-    # without an event_id (shouldn't happen for event_callback) process
+    # Fast ack (Slack retries anything past its 3s window) with retry dedup: the event_id claim and
+    # the job enqueue commit together, so a retry storm yields one processing job, and a crash
+    # before the ack leaves the claim for the retry to win. Events without an event_id process
     # without dedup rather than being dropped.
     def enqueue_event(payload)
       event_id = payload["event_id"]

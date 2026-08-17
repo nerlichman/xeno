@@ -1,10 +1,16 @@
 # frozen_string_literal: true
 
 module Xeno
-  # The durable conversation: lives for days or weeks, owns the transcript
-  # chat, the turn ledger, and the append-only event stream. Identified by
-  # id (inspect/stream handle) and at most one continuation_token (the
-  # channel-owned resume handle, unique among active sessions).
+  # = Sessions
+  #
+  # A session is one durable conversation with the agent. It can live for days or weeks and
+  # survive deploys, crashes, and restarts, because everything it is lives in rows: the transcript
+  # chat, the turn ledger, and the append-only event stream.
+  #
+  # A session is identified two ways. The id is the stable handle for inspection and streaming.
+  # The continuation_token is the resume handle a channel owns — this Slack thread, this HTTP
+  # client — unique among active sessions and released when the session ends, so the same token
+  # can start fresh.
   class Session < ApplicationRecord
     enum :status, %w[running waiting completed failed].index_with(&:itself), validate: true
 
@@ -13,10 +19,9 @@ module Xeno
     has_many :events, class_name: "Xeno::Event", dependent: :destroy
     has_many :pending_messages, class_name: "Xeno::PendingMessage", dependent: :destroy
 
-    # Opens a session for a first user message: builds the transcript chat
-    # per the resolved agent definition, stamps channel + principal, and
-    # stages turn 1. The caller enqueues the returned turn's job after the
-    # transaction commits (Session.start! does both).
+    # Opens a session for a first user message: builds the transcript chat per the resolved agent
+    # definition, stamps channel + principal, and stages turn 1. The caller enqueues the returned
+    # turn's job after the transaction commits (Session.start! does both).
     def self.open!(message:, channel: nil, principal: nil, continuation_token: nil, definition: Xeno.definition)
       transaction do
         chat = Chat.new
@@ -46,25 +51,20 @@ module Xeno
       session
     end
 
-    # Stages the next turn for one or more messages: persists each user
-    # message into the transcript, refreshes instructions (each turn picks up
-    # edited instructions without a restart), and
-    # appends the turn row. Runs in the caller's process so TurnJob replays
-    # never double-add the user message.
+    # Stages the next turn for one or more messages: persists each user message, refreshes
+    # instructions, and appends the turn row. Runs in the caller's process so TurnJob replays never
+    # double-add the user message.
     #
-    # defer_transcript: the turn row carries the messages but nothing is
-    # written into the transcript yet — the runner stages it when the turn
-    # is claimed. Required whenever an EARLIER turn may still be mid-flight
-    # (drained turns): appending user rows behind a parked turn's unanswered
-    # tool calls would wedge every later generate (providers demand tool
-    # results immediately after the assistant's tool_calls message).
+    # defer_transcript: the turn row carries the messages and the runner writes them at claim time.
+    # Required whenever an earlier turn may still be mid-flight — appending user rows behind
+    # unanswered tool calls would wedge every later generate.
     def stage_turn!(messages, definition: Xeno.definition, emit_received: true, defer_transcript: false)
       contents = Array(messages)
       transaction do
         unless defer_transcript
-          # with_instructions triggers the first to_llm build, so a fresh chat
-          # record must get its runtime options back first. nil clears: an
-          # agent whose instructions were removed sheds the stale system row.
+          # with_instructions triggers the first to_llm build, so a fresh chat record must get its
+          # runtime options back first. nil clears: an agent whose instructions were removed sheds
+          # the stale system row.
           chat.apply_runtime_options!(definition.config.model_options)
           chat.with_instructions(definition.instructions_for(session: self))
           contents.each { |content| chat.add_message(role: :user, content: content) }
@@ -78,12 +78,9 @@ module Xeno
       end
     end
 
-    # The channel entry point for follow-up messages. While a turn is active
-    # (one active turn per session) the message queues in pending_messages
-    # and is folded into the next turn; a PARKED session drains immediately
-    # (the message becomes a visible staged turn instead of sitting invisible
-    # until someone resolves the input).
-    # An idle session stages and enqueues a turn right away.
+    # The channel entry point for follow-up messages. While a turn is active the message queues in
+    # pending_messages and folds into the next turn; a parked session drains immediately, so the
+    # message becomes a visible staged turn. An idle session stages and enqueues right away.
     def receive_message!(content)
       if turns.active.exists?
         transaction do
@@ -99,13 +96,10 @@ module Xeno
       end
     end
 
-    # Folds every queued message into ONE next turn. Called when a turn
-    # parks or reaches a terminal status (and on messages to a parked
-    # session). Always defers the transcript: the drained turn may sit
-    # behind a parked turn whose tool calls are still unanswered, so its
-    # user rows are written only when the runner claims it — turn order and
-    # transcript order can never diverge. Row locks make a racing drain
-    # (park vs. incoming message) fold each message exactly once.
+    # Folds every queued message into one next turn, called when a turn parks or ends and on
+    # messages to a parked session. Always defers the transcript: the drained turn may sit behind
+    # unanswered tool calls, so its user rows are written only at claim — turn order and transcript
+    # order can never diverge. Row locks make a racing drain fold each message exactly once.
     def drain_pending_messages!(definition: Xeno.definition)
       turn = nil
       transaction do
@@ -119,19 +113,15 @@ module Xeno
       turn
     end
 
-    # Steering (opt-in per message): stop what the agent is doing and make
-    # THIS message the next turn. The active turn dies safely — a parked or
-    # pending turn settles its dangling tool calls (recorded answers
-    # injected, unapproved gates denied — the H1 machinery) and cancels
-    # immediately; a running turn cancels cooperatively (the steer message
-    # queues and the runner's cancel path folds it into the next turn at the
-    # next step boundary). If the cancel loses the race with a completing
-    # turn, steering degrades to a normal follow-up — never an error.
+    # Steering (opt-in per message): stop what the agent is doing and make this message the next
+    # turn. A parked or pending turn settles its dangling tool calls and cancels immediately; a
+    # running turn cancels cooperatively at the next step boundary. If the cancel loses the race
+    # with a completing turn, steering degrades to a normal follow-up — never an error.
     def steer!(content, definition: Xeno.definition)
       turn = turns.active.order(:sequence).first
 
       case turn&.status
-      when nil # idle: steer is just a message
+      when nil # idle: steer degrades to a plain follow-up message
         staged = stage_turn!(content, definition: definition)
         staged.enqueue!
         staged
@@ -155,11 +145,9 @@ module Xeno
       end
     end
 
-    # Stages a compaction turn (summarize-and-replace, executed by the
-    # runner under a normal claim). It queues behind any active or parked
-    # turn via the ordinary session-ordering machinery — the
-    # queued-behind-the-active-turn semantics — and never appends a
-    # synthetic user message.
+    # Stages a compaction turn (summarize-and-replace, executed by the runner under a normal claim).
+    # It queues behind any active or parked turn via the ordinary session-ordering machinery and
+    # never appends a synthetic user message.
     def stage_compaction_turn!(reason:, used: nil, limit: nil)
       transaction do
         request = { "reason" => reason, "used" => used, "limit" => limit }.compact
@@ -174,13 +162,10 @@ module Xeno
       Event.append!(self, event_type, data)
     end
 
-    # Called before a turn dies with tool calls still unanswered (cancel
-    # while parked, schedule park failure): every dangling call gets a tool
-    # result in the transcript. Without this the assistant tool_call rows
-    # stay unanswered forever and every later generate is a provider 400 —
-    # the session is bricked. A completed action (e.g. an answered question
-    # whose resume never ran) injects its recorded output; everything else
-    # gets a denial, recorded on the action row as the audit trail.
+    # Called before a turn dies with tool calls still unanswered: every dangling call gets a tool
+    # result in the transcript. Without this the unanswered rows make every later generate a
+    # provider 400 and the session is bricked. A completed action injects its recorded output;
+    # everything else gets a denial, recorded on the action row.
     def settle_unanswered_tool_calls!(turn, reason:)
       chat_record = Chat.find(chat_id)
       llm = chat_record.to_llm
@@ -215,8 +200,8 @@ module Xeno
       running? || waiting?
     end
 
-    # Terminal states release the continuation token (a finished session must
-    # not squat a channel thread's token); a copy stays in metadata for audit.
+    # Terminal states release the continuation token (a finished session must not squat a channel
+    # thread's token); a copy stays in metadata for audit.
     def finish!(new_status)
       raise ArgumentError, "not a terminal status: #{new_status}" unless %w[completed failed].include?(new_status)
 

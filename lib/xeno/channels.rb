@@ -1,18 +1,17 @@
 # frozen_string_literal: true
 
 module Xeno
-  # The channel registry. A channel (a) normalizes platform input into user
-  # messages, (b) owns the session's continuation token, and (c) decides
-  # delivery of agent output. HTTP is built in; agent/channels/*.rb declare
-  # the rest via the DSL:
+  # The channel registry. A channel normalizes platform input into user messages, owns the session's
+  # continuation token, and decides delivery of agent output. HTTP is built in; agent/channels/*.rb
+  # declare the rest:
   #
   #   Xeno.channel :slack do
   #     signing_secret Rails.application.credentials.dig(:slack, :signing_secret)
   #     bot_token     Rails.application.credentials.dig(:slack, :bot_token)
   #   end
   #
-  # Delivery is a failable nicety: the durable truth lives in the transcript
-  # and event rows, so a failed post logs and moves on.
+  # Delivery is a failable nicety: the durable truth lives in the transcript and event rows, so a
+  # failed post logs and moves on.
   module Channels
     module_function
 
@@ -49,8 +48,8 @@ module Xeno
       Rails.logger.warn("xeno: channel input-request delivery failed for session #{session.id}: #{e.class}: #{e.message}")
     end
 
-    # A per-reply delta sink (post-then-edit streaming) when the session's
-    # channel opts in; nil otherwise. Failable nicety like all delivery.
+    # A per-reply delta sink (post-then-edit streaming) when the session's channel opts in; nil
+    # otherwise. Failable nicety like all delivery.
     def streamer_for(session)
       channel = for_session(session)
       return nil unless channel.respond_to?(:streamer_for)

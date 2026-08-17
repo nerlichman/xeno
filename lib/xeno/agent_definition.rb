@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
 module Xeno
-  # The resolved agent: everything discovered under the app's agent/
-  # directory, plus diagnostics for anything misplaced or broken.
-  # Discovery never raises — a broken agent directory yields a definition
-  # whose diagnostics say exactly what is wrong (surfaced by `rake xeno:info`).
+  # The resolved agent: everything discovered under the app's agent/ directory, plus diagnostics for
+  # anything misplaced or broken. Discovery never raises — a broken agent directory yields a
+  # definition whose diagnostics say exactly what is wrong (surfaced by `rake xeno:info`).
   class AgentDefinition
     SLOT_DIRS = %w[tools skills channels schedules hooks lib].freeze
     TOOL_SLUG = /\A[a-z][a-z0-9_]*\z/
@@ -21,9 +20,9 @@ module Xeno
     attr_reader :root, :name, :config, :instructions, :dynamic_instructions,
                 :tools, :schedules, :channels, :hooks, :diagnostics
 
-    # Builds the definition for the app's agent root. `resolver` maps a tool
-    # file's camelized basename to its constant; the default asks Zeitwerk
-    # (via const_get on Xeno::Tools) and is only overridden in tests.
+    # Builds the definition for the app's agent root. `resolver` maps a tool file's camelized
+    # basename to its constant; the default asks Zeitwerk (via const_get on Xeno::Tools) and is only
+    # overridden in tests.
     def self.load(root, name:, resolver: nil)
       new(root: root, name: name, resolver: resolver).tap(&:discover)
     end
@@ -64,11 +63,9 @@ module Xeno
 
     def dynamic_instructions? = !@dynamic_instructions.nil?
 
-    # The system prompt for one turn: static markdown first, the dynamic
-    # block's return appended (resolved fresh at every turn stage with the
-    # session context — the current_user use case). A raising block never
-    # bricks the session: the turn proceeds on the static instructions and
-    # the failure is logged.
+    # The system prompt for one turn: static markdown first, then the dynamic block's return,
+    # resolved fresh at every turn stage with the session context. A raising block never bricks the
+    # session — the turn proceeds on the static instructions and the failure is logged.
     def instructions_for(session: nil)
       parts = [ instructions ]
       if @dynamic_instructions
@@ -118,9 +115,8 @@ module Xeno
       end
     end
 
-    # agent/instructions.rb — `Xeno.instructions do |context| ... end`,
-    # resolved at turn-stage time (context: session, principal) and appended
-    # to the static markdown.
+    # agent/instructions.rb — `Xeno.instructions do |context| ... end`, resolved at turn-stage time
+    # (context: session, principal) and appended to the static markdown.
     def load_dynamic_instructions
       file = root.join("instructions.rb")
       return unless file.file?
@@ -155,10 +151,9 @@ module Xeno
           next
         end
 
-        # Xeno::Tool required, not just RubyLLM::Tool: a plain RubyLLM
-        # subclass leaks a namespaced wire name (`xeno--tools--foo`) that
-        # misses the slug-keyed lookup, and it has no approval API — the
-        # gate would silently fail open.
+        # Xeno::Tool required, not just RubyLLM::Tool: a plain RubyLLM subclass leaks a namespaced
+        # wire name (`xeno--tools--foo`) that misses the slug-keyed lookup, and it has no approval
+        # API — the gate would silently fail open.
         unless klass.is_a?(Class) && klass < Xeno::Tool
           error "tools/#{file.basename}: Xeno::Tools::#{slug.camelize} must subclass Xeno::Tool " \
                 "(naming and the approval gate depend on it)"
@@ -173,9 +168,9 @@ module Xeno
       Xeno::Tools.const_get(slug.camelize)
     end
 
-    # agent/schedules/*.md — YAML frontmatter with a cron: line, body is the
-    # task prompt. Compiled to Solid Queue recurring entries by
-    # `rake xeno:schedules:sync`; never fired on cadence in development.
+    # agent/schedules/*.md — YAML frontmatter with a cron: line, body is the task prompt. Compiled
+    # to Solid Queue recurring entries by `rake xeno:schedules:sync`; never fired on cadence in
+    # development.
     def discover_schedules
       dir = root.join("schedules")
       return unless dir.directory?
@@ -204,9 +199,9 @@ module Xeno
       end
     end
 
-    # agent/channels/*.rb — DSL files (`Xeno.channel :slack do ... end`).
-    # Loading registers the channel globally; the definition records what
-    # each file declared for diagnostics and xeno:info.
+    # agent/channels/*.rb — DSL files (`Xeno.channel :slack do ... end`). Loading registers the
+    # channel globally; the definition records what each file declared for diagnostics and
+    # xeno:info.
     def discover_channels
       dir = root.join("channels")
       return unless dir.directory?
@@ -230,9 +225,9 @@ module Xeno
       end
     end
 
-    # agent/hooks/*.rb — observe-only handlers (`Xeno.hook "type" do … end`).
-    # One file may declare several; they merge across files. Handlers for
-    # unknown event types get a warning (typos never fire).
+    # agent/hooks/*.rb — observe-only handlers (`Xeno.hook "type" do … end`). One file may declare
+    # several; they merge across files. Handlers for unknown event types get a warning (typos never
+    # fire).
     def discover_hooks
       dir = root.join("hooks")
       return unless dir.directory?

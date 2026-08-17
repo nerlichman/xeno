@@ -1,11 +1,9 @@
 # frozen_string_literal: true
 
 module Xeno
-  # Resolving parked work: approvals, denials, and question answers. Each
-  # resolution updates the action and — once no other action on the turn is
-  # still awaiting input — flips the turn back to pending and enqueues the
-  # resume job. A parked session holds zero compute; this is the only way
-  # back in.
+  # Resolves parked work: approvals, denials, and question answers. Each resolution updates its
+  # action; when nothing on the turn still awaits input, the turn flips back to pending and the
+  # resume job enqueues. A parked session holds no process — this is the only way back in.
   module Inputs # :nodoc:
     module_function
 
@@ -42,10 +40,9 @@ module Xeno
       end
     end
 
-    # The action row stays authoritative (kind, payload, who, when); the
-    # decision is mirrored onto the standard tool-call column so any
-    # RubyLLM-aware tooling reads it natively. Questions have no place
-    # there and are not mirrored.
+    # The action row stays authoritative (kind, payload, who, when); the decision is mirrored onto
+    # the standard tool-call column so any RubyLLM-aware tooling reads it natively. Questions have
+    # no place there and are not mirrored.
     def mirror_decision(action, decision)
       return unless action.kind == "tool"
 
@@ -53,14 +50,10 @@ module Xeno
       record&.update!(approval: decision)
     end
 
-    # Shared plumbing: guard the state, apply the resolution, resume when
-    # the turn has nothing else to wait for. Resolution, status flip, and
-    # the resume enqueue commit in ONE transaction: on a DB-backed queue
-    # (Solid Queue shares the app database, and ActiveJob 8.1 enqueues
-    # in-transaction by default) a crash can never separate "approved" from
-    # "job exists" — either everything landed or the input is still pending
-    # and the human just retries. Backends that defer or lose the enqueue
-    # fall back to the reaper's sweeps.
+    # Guards the state, applies the resolution, and resumes when the turn has nothing left to wait
+    # for. Resolution, status flip, and resume enqueue commit in one transaction, so on a DB-backed
+    # queue a crash cannot separate "approved" from "job exists". Backends that defer or lose the
+    # enqueue fall back to the reaper.
     def resolve(action)
       unless action.status == "pending_approval"
         raise Xeno::Error, "action #{action.id} is not awaiting input (status: #{action.status})"
@@ -73,14 +66,13 @@ module Xeno
       action
     end
 
-    # Resuming with unanswered inputs would generate against partial tool
-    # results (an invalid provider state) — the runner would just re-park,
-    # so don't bother waking it until everything is resolved.
+    # Resuming with unanswered inputs would generate against partial tool results — an invalid
+    # provider state the runner would re-park on. Wake it only when everything is resolved.
     def resume_turn(turn)
       return if turn.actions.where(status: "pending_approval").exists?
 
-      # Resumes are human-driven and unbounded — counted apart from the
-      # failure `attempts` so approvals can never poison the turn (H2).
+      # Resumes are human-driven and unbounded — counted apart from the failure `attempts` so
+      # approvals can never poison the turn.
       resumed = Turn.where(id: turn.id, status: "waiting")
                     .update_all("status = 'pending', resumes = resumes + 1")
       return unless resumed == 1

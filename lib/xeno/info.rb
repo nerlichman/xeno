@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 module Xeno
-  # Renders the resolved agent for `rake xeno:info` — the discovery
-  # diagnostics surface.
+  # Renders the resolved agent for `rake xeno:info` — the discovery diagnostics surface.
   module Info
     module_function
 

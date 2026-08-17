@@ -1,21 +1,17 @@
 # frozen_string_literal: true
 
 module Xeno
-  # Drives one turn to completion (or to a park). This is the durable core:
-  # RubyLLM's decomposed v2 loop (`generate` + self-executed tools +
-  # `add_message` injection), checkpointed in the database at every move.
-  # We never call `run_tools` (no approval gate, no per-call action
-  # checkpoint) or `complete` (a turn must bound its model calls).
+  # Drives one turn to completion or to a park, checkpointing every move in the database. Uses
+  # RubyLLM's decomposed loop — `generate`, self-executed tools, `add_message` injection — and never
+  # `run_tools` (no approval gate, no per-call checkpoint) or `complete` (a turn must bound its
+  # model calls).
   #
-  # Crash-safety invariants:
-  # - The user message and instructions were persisted when the turn was
-  #   staged; the runner only advances the transcript.
-  # - `generate` persists the assistant message via the acts_as callback path.
-  # - A tool execution and its transcript injection commit in ONE transaction
-  #   (the action row is the checkpoint) — recorded calls are never re-run.
-  # - Every write is fenced on the claim token; zombies affect zero rows.
-  # - Trailing blank assistant rows (the mid-generate crash window) are
-  #   removed before deciding anything (spike #2, hazard 1).
+  # Invariants:
+  # - A tool execution and its transcript injection commit in one
+  #   transaction; recorded calls are never re-run.
+  # - Every write is fenced on the claim token; a zombie affects zero rows.
+  # - Trailing blank assistant rows (mid-generate crash artifacts) are
+  #   removed before anything else.
   class TurnRunner # :nodoc:
     include Compaction
 
@@ -41,9 +37,9 @@ module Xeno
     private
 
     def run_claimed
-      # A pristine record instance: a memoized to_llm built elsewhere (e.g.
-      # by stage_turn! in this same process) would ignore the runtime attrs
-      # prepare_chat sets (protocol, assume_model_exists).
+      # A pristine record instance: a memoized to_llm built elsewhere (e.g. by stage_turn! in this
+      # same process) would ignore the runtime attrs prepare_chat sets (protocol,
+      # assume_model_exists).
       @chat = Chat.find(session.chat_id)
       clear_stale_cancellation
 
@@ -75,8 +71,8 @@ module Xeno
       interrupt_turn
       :interrupted
     rescue Xeno::Parked => parked
-      # Schedules have no human to wait for: a gated tool (or ask_question)
-      # in a schedule run deterministically fails the turn.
+      # Schedules have no human to wait for: a gated tool (or ask_question) in a schedule run
+      # deterministically fails the turn.
       if session.channel == "schedule"
         fail_schedule_park
         :failed
@@ -103,27 +99,22 @@ module Xeno
       raise
     end
 
-    # assume_model_exists and protocol are not persisted on the chat record —
-    # every process re-applies them from the definition before the first
-    # to_llm build (which with_tools triggers).
+    # assume_model_exists and protocol are not persisted on the chat record — every process
+    # re-applies them from the definition before the first to_llm build (which with_tools triggers).
     def prepare_chat
       @chat.apply_runtime_options!(definition.config.model_options)
       @chat.with_tools(Xeno::AskQuestion, *definition.tool_classes)
     end
 
-    # A persisted cancellation flag set before this turn claimed is stale —
-    # it targeted work that no longer exists (the previous turn ended, or a
-    # cancel raced a completion) and would otherwise poison this turn's
-    # first generate. Cancellation is documented as cooperative/best-effort,
-    # so the tiny window where a cancel lands between our claim and this
-    # clear is an accepted trade-off.
+    # A cancellation flag set before this turn claimed targeted work that no longer exists; clear
+    # it. Cancellation is cooperative, so a cancel landing between the claim and this clear is an
+    # accepted loss.
     def clear_stale_cancellation
       Chat.where(id: @chat.id, cancelled: true).update_all(cancelled: false)
     end
 
-    # A process killed mid-generate leaves a blank assistant row that reads as
-    # a completed turn. Trailing blank assistant rows (no content, no tool
-    # calls) are crash artifacts — delete them.
+    # A kill mid-generate leaves a blank assistant row. Trailing blank assistant rows are crash
+    # artifacts; delete them.
     def remove_crash_artifacts
       loop do
         last = @chat.messages_association.order(:id).last
@@ -139,12 +130,10 @@ module Xeno
       @chat.reload
     end
 
-    # A drained turn carries its user messages in the turn row until it is
-    # claimed (a mid-flight earlier transcript must not be appended to).
-    # Staged here, exactly once: the appends and the flag flip commit
-    # together, and the flip is fenced — a crash replays the whole thing,
-    # a zombie stages nothing. Instructions refresh here too, so a deploy
-    # between drain and claim behaves like any other new turn.
+    # A drained turn carries its user messages in the turn row until it is claimed; appending
+    # earlier would corrupt a mid-flight transcript. The appends and the flag flip commit together
+    # and the flip is fenced, so a crash replays and a zombie stages nothing. Instructions refresh
+    # here too.
     def stage_deferred_transcript!
       return unless turn.transcript_deferred?
 
@@ -167,10 +156,9 @@ module Xeno
       last_assistant.tool_calls.values.reject { |call| answered.include?(call.id) }
     end
 
-    # Resolves the batch: replays recorded work, injects denials, executes
-    # what is allowed to run, and collects everything that needs a human.
-    # Ungated calls in a mixed batch still execute before the park (their
-    # results are recorded, so the resume replays them for free).
+    # Resolves the batch: replays recorded work, injects denials, executes what may run, and
+    # collects what needs a human. Ungated calls in a mixed batch execute before the park; the
+    # resume replays their recorded results.
     def resolve_tool_calls(calls)
       blocking = []
 
@@ -205,9 +193,8 @@ module Xeno
       tool_class = definition.tools[call.name]
       return false unless tool_class.respond_to?(:approval)
 
-      # A tool declaring RubyLLM's requires_approval without a xeno policy is
-      # asking for a gate; running it ungated would betray that declaration.
-      # An explicit xeno policy (even :never) wins.
+      # A tool declaring RubyLLM's requires_approval without a xeno policy gets the gate. An
+      # explicit xeno policy, even :never, wins.
       if tool_class.respond_to?(:approval_declared?) && !tool_class.approval_declared? &&
          tool_class.respond_to?(:requires_approval?) && tool_class.requires_approval?
         return true
@@ -272,9 +259,8 @@ module Xeno
       @chat.to_llm.messages.any? { |m| m.role == :tool && m.tool_call_id == call.id }
     end
 
-    # A completed action whose result is not yet in the transcript: either an
-    # answered question (Inputs writes the answer to the action only) or a
-    # self-heal after replay. Inject the recorded output — never re-execute.
+    # A completed action whose result is not yet in the transcript — an answered question, or a
+    # self-heal after replay. Inject the recorded output; never re-execute.
     def replay_completed_action(action, call)
       return false unless action.completed?
 
@@ -287,12 +273,9 @@ module Xeno
       true
     end
 
-    # A raising tool must NOT bubble into the queue's retry ladder: the
-    # action row wouldn't exist as a checkpoint, so every retry would
-    # re-execute the tool (side effects!), and after retry_on exhausted the
-    # turn would wedge. The exception becomes an error tool result the
-    # model can recover from; the failed action row replays like any other
-    # checkpoint.
+    # A raising tool must not reach the queue's retry ladder — without the action-row checkpoint
+    # every retry would re-execute it. The exception becomes an error tool result the model can
+    # recover from, and the failed action replays like any other checkpoint.
     def execute_action(action, call)
       tool_class = definition.tools[call.name]
       failure = nil
@@ -332,8 +315,8 @@ module Xeno
       })
     end
 
-    # A failed action is a checkpoint too: the recorded error result is
-    # injected on replay — the tool is never re-executed.
+    # A failed action is a checkpoint too: the recorded error result is injected on replay — the
+    # tool is never re-executed.
     def replay_failed_action(action, call)
       return false unless action.status == "failed"
 
@@ -350,16 +333,13 @@ module Xeno
       @chat.add_message(role: :tool, content: content, tool_call_id: call.id)
     end
 
-    # Keeps the claim visibly alive while this thread is buried in a model
-    # call or a tool body — the calls that can outlast turn_stale_after and
-    # would otherwise get reclaimed mid-flight by claim! or the reaper. A
-    # sibling thread (own DB connection) beats heartbeat_at until the block
-    # returns; a fenced beat means we were reclaimed anyway, so it stops and
-    # lets the next fenced write in this thread raise.
+    # Keeps the claim alive through model calls and tool bodies, the calls that can outlast
+    # turn_stale_after. A sibling thread with its own DB connection beats heartbeat_at until the
+    # block returns; a fenced beat means the turn was reclaimed, so it stops.
     def with_heartbeat
       interval = Xeno.config.heartbeat_interval.to_f
-      # A non-positive interval (turn_stale_after 0 in tests) means every
-      # heartbeat is already stale — a beater would just hammer the DB.
+      # A non-positive interval (turn_stale_after 0 in tests) means every heartbeat is already stale
+      # — a beater would just hammer the DB.
       return yield unless interval.positive?
 
       stop = Thread::Queue.new
@@ -396,8 +376,8 @@ module Xeno
       step_index = turn.record_step!(token)
       session.emit("step.started", { turn_id: turn.id, step: step_index })
 
-      # A channel that streams (Slack post-then-edit) gets the deltas; the
-      # sink is a failable nicety and never touches the turn's fate.
+      # A channel that streams (Slack post-then-edit) gets the deltas; the sink is a failable nicety
+      # and never touches the turn's fate.
       streamer = Channels.streamer_for(session)
       response = ActiveSupport::Notifications.instrument("xeno.step", turn_id: turn.id, step: step_index) do
         with_heartbeat do
@@ -421,20 +401,17 @@ module Xeno
         })
       else
         emit_completion_events(response)
-        # The streamer writes the durable final text into its message; when
-        # that lands, the completion post would be a duplicate.
+        # The streamer writes the durable final text into its message; when that lands, the
+        # completion post would be a duplicate.
         @stream_delivered = true if streamer&.finish(response.content)
       end
 
       response
     end
 
-    # Budgets, before EACH model call, from the per-attempt usage ledger
-    # (ruby_llm_usage_entries) — the provider's own counts, summed across
-    # every attempt of this session's chat, retries included. The call that
-    # crosses a cap is allowed to finish (usage is only known afterwards);
-    # the NEXT call trips. Checked here (not at claim) so a turn that needs
-    # no model call — pure replay — still settles cleanly.
+    # Budgets are checked before each model call, from the per-attempt usage ledger (retries
+    # included). The call that crosses a cap finishes — usage is only known afterwards — and the
+    # next call trips. Checked here rather than at claim so a pure-replay turn still settles.
     def enforce_budgets!
       check_budget_axis!("input", :input_tokens, Xeno.config.max_input_tokens_per_session)
       check_budget_axis!("output", :output_tokens, Xeno.config.max_output_tokens_per_session)
@@ -463,9 +440,9 @@ module Xeno
       advance_session
     end
 
-    # Channel delivery (Slack thread reply, etc.) — a failable nicety; the
-    # durable truth is already in the transcript and events. Skipped when a
-    # streamer already delivered this reply (post-then-edit).
+    # Channel delivery (Slack thread reply, etc.) — a failable nicety; the durable truth is already
+    # in the transcript and events. Skipped when a streamer already delivered this reply
+    # (post-then-edit).
     def deliver_final_answer
       return if @stream_delivered
 
@@ -473,10 +450,8 @@ module Xeno
       Channels.deliver_completion(session, final.content) if final&.content.present?
     end
 
-    # After a terminal turn: fold queued messages into the next turn, and
-    # chain the next pending turn's job (later turns can't claim while an
-    # earlier one is non-terminal, so completion is what wakes them). A
-    # session retired mid-turn (reset) stops advancing.
+    # After a terminal turn: fold queued messages into the next turn and chain the next pending
+    # turn's job — completion is what wakes later turns. A session retired mid-turn stops advancing.
     def advance_session
       return unless session.reload.active?
 
@@ -484,10 +459,9 @@ module Xeno
       session.turns.where(status: "pending").order(:sequence).first&.enqueue!
     end
 
-    # Parking: the pending actions are recorded, the turn is waiting, and the
-    # job ENDS — no process waits. Input resolution enqueues the resume.
-    # Messages that queued behind this turn become visible NOW as a staged
-    # (deferred) next turn.
+    # Parking: the pending actions are recorded, the turn waits, and the job ends — no process
+    # waits. Input resolution enqueues the resume; queued messages become a staged (deferred) next
+    # turn immediately.
     def park_turn(actions = [])
       turn.fenced_update!(token, status: "waiting")
       session.update!(status: "waiting")
@@ -514,19 +488,16 @@ module Xeno
       advance_session
     end
 
-    # Transient failure: count it, hand the claim back (status pending) so
-    # the retry can claim immediately, and let the error propagate to the
-    # queue's retry machinery.
+    # Transient failure: count it, hand the claim back (status pending) so the retry can claim
+    # immediately, and let the error propagate to the queue's retry machinery.
     def release_for_retry(error)
       turn.release_for_retry!(token, error)
     rescue Xeno::Fenced
       nil
     end
 
-    # The graceful-shutdown checkpoint (AJ Continuation's stopping? probe,
-    # adopted): between steps, a stopping worker hands the turn back instead
-    # of dying mid-step and waiting out stale-heartbeat reclaim. Every move
-    # so far is checkpointed, so the next worker fast-forwards for free.
+    # Between steps, a stopping worker hands the turn back instead of dying mid-step and waiting out
+    # stale-heartbeat reclaim. Every move so far is checkpointed, so the next worker fast-forwards.
     def checkpoint_shutdown!
       raise Xeno::Interrupted, "worker is shutting down" if stopping?
     end
@@ -540,11 +511,8 @@ module Xeno
       false # an adapter without the probe never interrupts
     end
 
-    # Not a failure and not crash evidence: the claim is released (status
-    # pending, ladder untouched) and the turn re-enqueues itself for the
-    # next worker. The re-enqueue is at-least-once like everything else —
-    # if it is lost with the worker, the reaper's stale-pending sweep is
-    # the backstop.
+    # Not a failure and not crash evidence: the claim is released with the ladder untouched and the
+    # turn re-enqueues itself. A lost re-enqueue is caught by the reaper's stale-pending sweep.
     def interrupt_turn
       turn.fenced_update!(token, status: "pending", heartbeat_at: Time.current)
       turn.enqueue!
