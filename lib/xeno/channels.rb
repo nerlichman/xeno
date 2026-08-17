@@ -28,7 +28,7 @@ module Xeno
       when :slack
         Slack.new(&block)
       else
-        raise Xeno::Error, "unknown channel type: #{name} (v0.1 ships :slack; http is built in)"
+        raise Xeno::Error, "unknown channel type: #{name} (:slack is bundled; http is built in)"
       end
     end
 

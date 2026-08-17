@@ -210,7 +210,7 @@ class TurnRunnerTest < ActiveSupport::TestCase
     definition = TestDefinition.new
     session, turn = start_session(definition)
 
-    # The mid-generate crash artifact from spike #2.
+    # The mid-generate crash artifact.
     session.chat.messages_association.create!(role: :assistant, content: "")
 
     assert_equal :completed, Xeno::TurnRunner.new(turn, definition: definition).run

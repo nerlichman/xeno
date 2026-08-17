@@ -32,7 +32,7 @@ module FakeLLMHelpers
     fake
   end
 
-  # A chat wired to the fake server. Mirrors the spike harness.
+  # A chat wired to the fake server.
   def fake_chat(model: "fake-model", **options)
     RubyLLM.chat(model: model, provider: :ollama, assume_model_exists: true, **options)
   end

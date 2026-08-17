@@ -9,9 +9,9 @@ how the durability machinery actually works. The README sells it; this explains 
   `running | waiting | completed | failed`. Owns one transcript chat, the turn ledger,
   the event stream, and at most one `continuation_token` (channel-owned resume handle,
   unique among ACTIVE sessions). A session stays active indefinitely — turns finishing
-  never retire it; **`reset` is the only terminal transition in v0.1**, and it nulls
+  never retire it; **`reset` is the only terminal transition**, and it nulls
   the token (audit copy in `metadata`) so the same handle can start fresh. The
-  `failed` status and `session.failed` event are reserved (never produced in v0.1).
+  `failed` status and `session.failed` event are reserved (never produced today).
 - **Turn** (`xeno_turns`) — one user message (or several, when queued messages fold)
   and all work until the agent responds. One ActiveJob. Statuses:
   `pending | running | waiting | completed | failed | cancelled`.

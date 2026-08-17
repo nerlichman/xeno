@@ -2,15 +2,14 @@
 
 require "test_helper"
 
-# The park/kill/rehydrate/inject/resume flow, run through
-# RubyLLM's Rails acts_as persistence on xeno-owned tables. This decides the
-# Transcript on acts_as, rather than our own serializer tables.
+# The park/kill/rehydrate/inject/resume flow, run through RubyLLM's Rails
+# acts_as persistence on xeno-owned tables.
 #
-# "Process death" is modeled as dropping every in-memory object and reloading
-# from the database with fresh ActiveRecord instances — the DB rows are the
-# only state, which is exactly what a fresh worker process would see. A real
-# kill -9 through the full runtime is M4/M8's verification.
-class Spike02ActsAsTranscriptTest < ActiveSupport::TestCase
+# Process death is modeled as dropping every in-memory object and
+# reloading fresh ActiveRecord instances — the DB rows are the only
+# state, which is what a fresh worker process would see. A real kill -9
+# through the full runtime is covered by the end-to-end scripts.
+class TranscriptPersistenceTest < ActiveSupport::TestCase
   class ChargeCard < RubyLLM::Tool
     description "Charge the customer's card on file. Irreversible."
     parameter :amount_cents, type: :integer, description: "Amount in cents"
@@ -25,7 +24,7 @@ class Spike02ActsAsTranscriptTest < ActiveSupport::TestCase
       if FakeLLM.tool_result?(body)
         FakeLLM.text("Done — charged $42.00 (ch_42).")
       else
-        FakeLLM.tool_call("charge_card", { amount_cents: 4200 }, id: "call_spike2_001")
+        FakeLLM.tool_call("charge_card", { amount_cents: 4200 }, id: "call_charge_001")
       end
     end
   end
@@ -51,14 +50,14 @@ class Spike02ActsAsTranscriptTest < ActiveSupport::TestCase
     refute chat.complete?
     call = response.tool_calls.values.first
     assert_equal "charge_card", call.name
-    assert_equal "call_spike2_001", call.id
+    assert_equal "call_charge_001", call.id
 
     # Persistence checks: user message + assistant message + tool_calls row.
     chat_id = chat.id
     assert_equal 2, Xeno::Message.where(chat_id: chat_id).count
     assistant_row = Xeno::Message.where(chat_id: chat_id, role: "assistant").sole
     tool_call_row = RubyLLM::ActiveRecord::ToolCall.where(message: assistant_row).sole
-    assert_equal "call_spike2_001", tool_call_row.tool_call_id
+    assert_equal "call_charge_001", tool_call_row.tool_call_id
     assert_equal({ "amount_cents" => 4200 }, tool_call_row.arguments)
 
     # --- process death: drop every in-memory object ---
@@ -74,14 +73,14 @@ class Spike02ActsAsTranscriptTest < ActiveSupport::TestCase
     pending = revived.to_llm.messages.last.tool_calls
     revived_call = pending.values.first
     assert_equal "charge_card", revived_call.name
-    assert_equal "call_spike2_001", revived_call.id
+    assert_equal "call_charge_001", revived_call.id
     assert_equal({ "amount_cents" => 4200 }, revived_call.arguments)
 
     # --- the human approved; runtime performed the charge, injects the result ---
     result_row = revived.add_message(
       role: :tool,
       content: JSON.generate({ status: "succeeded", charge_id: "ch_42" }),
-      tool_call_id: "call_spike2_001"
+      tool_call_id: "call_charge_001"
     )
     assert_equal result_row, tool_call_row.reload.result,
       "tool result row must link back to the tool call it answers"
@@ -101,7 +100,7 @@ class Spike02ActsAsTranscriptTest < ActiveSupport::TestCase
     resume_request = fake.requests.last
     roles = resume_request["messages"].map { |m| m["role"] }
     assert_equal %w[user assistant tool], roles
-    assert_equal "call_spike2_001", resume_request["messages"].last["tool_call_id"]
+    assert_equal "call_charge_001", resume_request["messages"].last["tool_call_id"]
 
     # The gated tool's execute raises unconditionally — reaching here proves
     # neither we nor RubyLLM ever ran it.

@@ -7,7 +7,7 @@ require "xeno/schedules"
 # retry ladder. The reaper re-enqueues work with no live owner — the
 # mid-step-kill wedge (running + stale heartbeat, job dead in the queue's
 # failed set) and the approve-then-crash orphan (all actions resolved, no
-# resume job) from the field findings.
+# resume job).
 class ReaperTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-# A deterministic OpenAI-Chat-Completions-compatible server standing in for a model.
-# Generalized from spikes/01_parking/fake_llm_server.rb — this is the test suite's
-# primary engine (the mockModel equivalent): zero cost, zero flake, fully offline.
+# A deterministic OpenAI-Chat-Completions-compatible server standing in
+# for a model: the test suite's primary engine — zero cost, zero flake,
+# fully offline.
 #
 # RubyLLM reaches it through the Ollama provider (keyless, Chat Completions dialect,
 # configurable api base). Point `RubyLLM.configure { |c| c.ollama_api_base = fake.url }`

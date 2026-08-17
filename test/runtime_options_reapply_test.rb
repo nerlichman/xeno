@@ -2,15 +2,12 @@
 
 require "test_helper"
 
-# Regression, field-confirmed: assume_model_exists and protocol
-# are runtime attributes, not columns. The SECOND message of a session
-# stages through a freshly loaded chat record, and with_instructions
-# triggers the first to_llm build — which resolved the model strictly
-# (ModelNotFoundError for any custom/OpenAI-compatible model) and with the
-# provider's default protocol. First messages worked (open! set the attrs
-# on the in-memory record), which is exactly why this survived to the
-# field run.
-class FindingKTest < ActiveSupport::TestCase
+# Regression: assume_model_exists and protocol are runtime attributes,
+# not columns, so a session's second message — staged through a freshly
+# loaded chat record — used to resolve the model strictly and raise
+# ModelNotFoundError for any custom model. First messages worked because
+# open! set the attributes on the in-memory record.
+class RuntimeOptionsReapplyTest < ActiveSupport::TestCase
   setup do
     @old_key = RubyLLM.config.openai_api_key
     @old_base = RubyLLM.config.openai_api_base

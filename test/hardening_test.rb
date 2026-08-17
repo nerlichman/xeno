@@ -2,11 +2,10 @@
 
 require "test_helper"
 
-# Phase-2 hardening regressions: the stale persisted-cancel flag (H), tool
-# argument coercion (field finding), strict XENO_DEV_ROUTES (S5), the 0600
-# standalone secret (S6), the loopback standalone bind (S4), and the dev-UI
-# stylesheet 404 (field finding).
-class CheapWinsTest < ActiveSupport::TestCase
+# Hardening regressions: the stale persisted-cancel flag, tool argument
+# coercion, strict XENO_DEV_ROUTES, the 0600 standalone secret, the
+# loopback standalone bind, and the dev-UI stylesheet 404.
+class HardeningTest < ActiveSupport::TestCase
   class Adder < Xeno::Tool
     description "Adds cents."
     parameter :amount_cents, type: :integer, description: "Amount in cents"
@@ -31,7 +30,7 @@ class CheapWinsTest < ActiveSupport::TestCase
     [ session, session.turns.order(:sequence).last ]
   end
 
-  test "a stale persisted cancel does not poison the next turn (H)" do
+  test "a stale persisted cancel does not poison the next turn" do
     start_fake_llm
     definition = TestDefinition.new
     session, turn = start_session(definition)
@@ -50,7 +49,7 @@ class CheapWinsTest < ActiveSupport::TestCase
       if FakeLLM.tool_result?(body)
         FakeLLM.text("added")
       else
-        # llama in the field: integer parameter, String JSON value.
+        # An integer parameter sent as a String JSON value.
         FakeLLM.tool_call("adder", { amount_cents: "4200", double: "true" }, id: "call_coerce")
       end
     end
@@ -82,7 +81,7 @@ class CheapWinsTest < ActiveSupport::TestCase
     assert_match(/expected integer/, tool_row.content)
   end
 
-  test "XENO_DEV_ROUTES accepts only 1/true (S5)" do
+  test "XENO_DEV_ROUTES accepts only 1/true" do
     refute Xeno.dev_routes_enabled?, "test env with no var must be off"
 
     begin
@@ -99,7 +98,7 @@ class CheapWinsTest < ActiveSupport::TestCase
     end
   end
 
-  test "standalone local secret is written 0600 and tightened on read (S6)" do
+  test "standalone local secret is written 0600 and tightened on read" do
     require "xeno/standalone/local_secret"
     Dir.mktmpdir do |dir|
       root = Pathname(dir)
@@ -115,16 +114,16 @@ class CheapWinsTest < ActiveSupport::TestCase
     end
   end
 
-  test "standalone puma config binds loopback by default with a HOST opt-out (S4)" do
+  test "standalone puma config binds loopback by default with a HOST opt-out" do
     config = File.read(File.expand_path("../lib/xeno/standalone/puma.rb", __dir__))
     assert_match(/HOST.*127\.0\.0\.1/, config, "default bind must be loopback with HOST opt-out")
     refute_match(/^port /, config, "a bare port directive would listen on 0.0.0.0")
   end
 end
 
-# The dev UI must not reference assets the engine cannot serve — standalone
-# and propshaft-less mounts got a RoutingError for
-# /stylesheets/xeno/application.css on every page load (field finding).
+# The dev UI must not reference assets the engine cannot serve —
+# standalone and propshaft-less mounts got a RoutingError for
+# /stylesheets/xeno/application.css on every page load.
 class DevUiStylesheetTest < ActionDispatch::IntegrationTest
   setup { ENV["XENO_DEV_ROUTES"] = "1" }
   teardown { ENV.delete("XENO_DEV_ROUTES") }
