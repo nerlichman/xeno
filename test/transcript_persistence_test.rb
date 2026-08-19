@@ -130,21 +130,17 @@ class TranscriptPersistenceTest < ActiveSupport::TestCase
     refute revived2.complete?, "after cleanup the turn is correctly unfinished"
   end
 
-  test "hazard: Rails add_message drops thinking signature; direct column write survives" do
+  test "add_message round-trips the thinking signature through the columns" do
     start_fake_llm
 
     chat = build_chat_record
     thinking = RubyLLM::Thinking.build(text: "let me think", signature: "sig_abc123")
     assert thinking, "Thinking.build should produce an object here"
 
-    # The documented hazard: acts_as add_message persists only role/content/
-    # finish_reason/parent-tool-call — the thinking signature is lost.
     row = chat.add_message(RubyLLM::Message.new(role: :assistant, content: "hm", thinking: thinking))
-    assert_nil row.reload.thinking_signature,
-      "documents the hazard: Rails add_message loses the thinking signature"
+    assert_equal "sig_abc123", row.reload.thinking_signature
+    assert_equal "let me think", row.thinking_text
 
-    # Writing the columns directly round-trips through MessageMethods#to_llm.
-    row.update!(thinking_text: "let me think", thinking_signature: "sig_abc123")
     revived = Xeno::Chat.find(chat.id).to_llm.messages.last
     assert_equal "sig_abc123", revived.thinking.signature
     assert_equal "let me think", revived.thinking.text

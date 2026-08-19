@@ -7,7 +7,7 @@ gemspec
 
 # The ref pin is load-bearing: upstream main and the released 1.16.0 gem are both
 # incompatible with xeno. Remove the pin at RubyLLM v2 GA.
-gem "ruby_llm", github: "crmne/ruby_llm", ref: "be80b6f1"
+gem "ruby_llm", github: "crmne/ruby_llm", ref: "9ca2c002"
 
 gem "puma"
 

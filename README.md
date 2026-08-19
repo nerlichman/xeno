@@ -5,7 +5,7 @@ xeno is a framework for durable AI agents. Built on Rails, it runs standalone (`
 A xeno agent is a session that survives restarts and deploys mid-turn, waits days for a human approval without holding a process, and resumes exactly where it stopped. Under the hood, xeno composes [RubyLLM](https://rubyllm.com) for model calls with ActiveJob and ActiveRecord for durability.
 
 > [!WARNING]
-> xeno currently tracks RubyLLM v2 (unreleased), pinned to git ref [`be80b6f1`](https://github.com/crmne/ruby_llm/commit/be80b6f1). The released `ruby_llm` gem (1.16.0) is not compatible. Standalone apps get the pin from the scaffold's Gemfile. If your Rails app already uses a released `ruby_llm`, xeno cannot run alongside it today. This resolves at RubyLLM v2 GA, when xeno switches to the released gem.
+> xeno currently tracks RubyLLM v2 (unreleased), pinned to git ref [`9ca2c002`](https://github.com/crmne/ruby_llm/commit/9ca2c002). The released `ruby_llm` gem (1.16.0) is not compatible. Standalone apps get the pin from the scaffold's Gemfile. If your Rails app already uses a released `ruby_llm`, xeno cannot run alongside it today. This resolves at RubyLLM v2 GA, when xeno switches to the released gem.
 
 ## The filesystem is the authoring interface
 

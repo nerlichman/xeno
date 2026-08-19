@@ -8,6 +8,14 @@ feedback.
 
 ## [Unreleased]
 
+### Changed
+
+- The `ruby_llm` pin moved from `be80b6f1` to `9ca2c002` (45 commits of upstream
+  work). Existing installs need the new migration (`bin/rails
+  xeno:install:migrations` then `db:migrate`): the per-attempt usage ledger is now
+  `ruby_llm_usages`, and its operation check constraint accepts the full set of
+  operations the ledger records.
+
 ## [0.0.2] - 2026-08-13
 
 **Upgrading from 0.0.1 requires a fresh database.** The migrations were squashed

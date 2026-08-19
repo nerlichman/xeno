@@ -23,7 +23,7 @@ how the durability machinery actually works. The README sells it; this explains 
 - **Transcript** — RubyLLM's acts_as integration: xeno owns the chat and message
   rows (`xeno_chats`, `xeno_messages`); RubyLLM owns tool calls, the model
   registry, per-attempt usage, and batches as library records on its own tables
-  (`ruby_llm_tool_calls`, `ruby_llm_models`, `ruby_llm_usage_entries`,
+  (`ruby_llm_tool_calls`, `ruby_llm_models`, `ruby_llm_usages`,
   `ruby_llm_batches`), polymorphic toward xeno's classes. No duplication above them.
 
 ## The turn loop (TurnRunner)
@@ -42,9 +42,9 @@ Rules inherited from the RubyLLM v2 investigation (each empirically verified):
 2. A killed process leaves a blank assistant row (`before_message` persists it before
    the HTTP call) that makes `complete?` read true — trailing blank assistant rows are
    deleted on entry.
-3. Tool results are injected via Rails `add_message` (safe: tool rows carry no
-   thinking); assistant messages are never injected that way (it drops the thinking
-   signature — write columns directly if you ever must).
+3. Tool results are injected via Rails `add_message`, which persists every column the
+   message model carries — thinking, citations, reasoning and the raw provider
+   content all survive the round trip.
 4. `assume_model_exists` and `protocol` are not persisted; the runner re-applies them
    from the definition on a pristine record every run.
 
@@ -167,7 +167,7 @@ stored content on `(session_id, index)`.
 ## Budgets
 
 Per-session token caps, enforced BEFORE each model call from the persisted
-per-attempt usage ledger (`ruby_llm_usage_entries` — the provider's own counts,
+per-attempt usage ledger (`ruby_llm_usages` — the provider's own counts,
 summed across every attempt of the session's chat, retries included). Input and
 output are checked independently; the call that crosses a cap is allowed to
 finish — the NEXT call trips, raising a deterministic `turn.failed` preceded by a
