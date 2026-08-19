@@ -96,11 +96,7 @@ module Xeno
         # repurposed keeper.
         keeper.ruby_llm_tool_calls.destroy_all
         keeper.ruby_llm_parent_tool_call&.update!(result: nil)
-        keeper.update!(
-          role: "user",
-          content: "#{SUMMARY_PREFIX}\n\n#{summary}",
-          thinking_text: nil, thinking_signature: nil
-        )
+        keeper.repurpose!(role: "user", content: "#{SUMMARY_PREFIX}\n\n#{summary}")
         record_compaction_result(compacted_messages: plan[:compact].size)
       end
       sync_llm_messages

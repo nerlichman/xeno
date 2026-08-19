@@ -16,6 +16,12 @@ feedback.
   `ruby_llm_usages`, and its operation check constraint accepts the full set of
   operations the ledger records.
 
+### Fixed
+
+- A compaction summary row no longer carries the provider metadata of the
+  assistant message it replaced. Thinking, citations, server tool calls and the
+  raw provider content all reset when a row is repurposed into a summary.
+
 ## [0.0.2] - 2026-08-13
 
 **Upgrading from 0.0.1 requires a fresh database.** The migrations were squashed

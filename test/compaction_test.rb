@@ -81,6 +81,19 @@ class CompactionTest < ActiveSupport::TestCase
     assert_equal 940, requested.data["used"]
     assert_equal WINDOW, requested.data["limit"]
 
+    # Every column that describes an utterance, stamped on the rows about to be compacted: the
+    # row the summary is written onto changes role, so none of it may survive. Driven off the
+    # schema rather than a list, so a column added later is covered without editing this test.
+    stamped = Xeno::Message.columns_hash.except(*Xeno::Message::REPURPOSE_KEEPS).to_h do |name, column|
+      value = case column.type
+      when :boolean then true
+      when :json, :jsonb then [ { "stale" => name } ]
+      else "stale-#{name}"
+      end
+      [ name, value ]
+    end
+    session.chat.messages_association.where.not(role: "system").update_all(stamped)
+
     # It runs like any turn (claim, fenced writes) and rewrites the transcript.
     assert_equal :completed, Xeno::TurnRunner.new(compaction_turn, definition: definition).run
     assert_equal "completed", compaction_turn.reload.status
@@ -92,6 +105,11 @@ class CompactionTest < ActiveSupport::TestCase
     assert_equal "user", summary_row.role
     assert_includes summary_row.content, "favorite color is BLUE"
     assert_includes summary_row.content, Xeno::Compaction::SUMMARY_PREFIX
+    stamped.each_key do |name|
+      expected = Xeno::Message.column_defaults[name]
+      why = "#{name} must reset when a row is repurposed into a summary"
+      expected.nil? ? assert_nil(summary_row[name], why) : assert_equal(expected, summary_row[name], why)
+    end
     tail_contents = convo[1..].map(&:content)
     assert_includes tail_contents, "here is a second message", "the recent tail survives verbatim"
     refute rows.any? { |r| r.content == "Remember: my favorite color is blue." },
