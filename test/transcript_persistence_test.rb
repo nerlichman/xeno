@@ -130,6 +130,19 @@ class TranscriptPersistenceTest < ActiveSupport::TestCase
     refute revived2.complete?, "after cleanup the turn is correctly unfinished"
   end
 
+  test "add_message round-trips provider reasoning through the columns" do
+    start_fake_llm
+
+    chat = build_chat_record
+    details = [ { "type" => "reasoning.text", "text" => "step one", "index" => 0 } ]
+
+    row = chat.add_message(RubyLLM::Message.new(role: :assistant, content: "hm", raw_reasoning: details))
+    assert_equal details, row.reload.raw_reasoning
+
+    revived = Xeno::Chat.find(chat.id).to_llm.messages.last
+    assert_equal details, revived.raw_reasoning
+  end
+
   test "add_message round-trips the thinking signature through the columns" do
     start_fake_llm
 

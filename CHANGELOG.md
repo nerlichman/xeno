@@ -8,10 +8,16 @@ feedback.
 
 ## [Unreleased]
 
+### Added
+
+- Message rows keep the provider's own reasoning payload (`raw_reasoning`), so a
+  transcript replayed to a provider that round-trips reasoning carries it back
+  intact.
+
 ### Changed
 
 - The `ruby_llm` pin moved from `be80b6f1` to `9ca2c002` (45 commits of upstream
-  work). Existing installs need the new migration (`bin/rails
+  work). Existing installs need the new migrations (`bin/rails
   xeno:install:migrations` then `db:migrate`): the per-attempt usage ledger is now
   `ruby_llm_usages`, and its operation check constraint accepts the full set of
   operations the ledger records.

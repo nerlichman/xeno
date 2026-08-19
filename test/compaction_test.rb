@@ -92,6 +92,7 @@ class CompactionTest < ActiveSupport::TestCase
       end
       [ name, value ]
     end
+    assert_includes stamped.keys, "raw_reasoning", "the stamp must reach the provider payload columns"
     session.chat.messages_association.where.not(role: "system").update_all(stamped)
 
     # It runs like any turn (claim, fenced writes) and rewrites the transcript.
